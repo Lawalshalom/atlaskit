@@ -1,0 +1,9 @@
+AtlasKit
+Copyright 2026 Halo Media and Digital Limited
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+The Apache-2.0 licence covers AtlasKit's source code only. N-ATLaS and the
+NCAIR1 ASR models are licensed separately by NCAIR and Awarri Technologies under
+the Awarri Open-Source Research and Innovation License. No model weights are
+included in this repository.

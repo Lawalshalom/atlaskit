@@ -144,4 +144,4 @@ Contributions are welcome: code, docs, evaluation data, and especially reports o
 
 ## Licensing
 
-AtlasKit's code is Apache-2.0. **N-ATLaS and its ASR models are not**: they are released by NCAIR and Awarri under the *Awarri Open-Source Research and Innovation License*. That license requires attribution, requires derivatives to use the same license, and caps use at 1,000 active end-users per 30 days without a commercial license from Awarri. AtlasKit does not redistribute any model weights. Each deployer downloads them under their own accepted terms.
+AtlasKit's code is licensed under [Apache-2.0](LICENSE) (copyright notice in [NOTICE](NOTICE)). **N-ATLaS and its ASR models are not**: they are released by NCAIR and Awarri under the *Awarri Open-Source Research and Innovation License*. That license requires attribution, requires derivatives to use the same license, and caps use at 1,000 active end-users per 30 days without a commercial license from Awarri. AtlasKit does not redistribute any model weights. Each deployer downloads them under their own accepted terms.
