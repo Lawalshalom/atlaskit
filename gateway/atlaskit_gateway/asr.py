@@ -6,6 +6,9 @@ only used for text never pays the memory cost.
 from __future__ import annotations
 
 import io
+import shutil
+import subprocess
+import tempfile
 import threading
 from typing import Protocol
 
@@ -19,15 +22,42 @@ class Transcriber(Protocol):
 
 
 def decode_audio(audio_bytes: bytes) -> "tuple[object, int]":
-    """Decode any common audio container (wav, mp3, ogg/opus WhatsApp notes, m4a) to 16 kHz mono."""
+    """Decode any common audio container to 16 kHz mono float32.
+
+    libsndfile reads wav/flac/ogg-vorbis/mp3 from memory. Browser recordings
+    (webm/opus), WhatsApp notes (ogg/opus on older libsndfile) and phone
+    recordings (m4a/aac) need ffmpeg.
+    """
     import numpy as np
 
     try:
-        import librosa  # handles mp3/ogg/m4a via soundfile/audioread + ffmpeg
-        audio, sr = librosa.load(io.BytesIO(audio_bytes), sr=TARGET_SR, mono=True)
-        return audio.astype(np.float32), sr
-    except Exception as exc:  # pragma: no cover - depends on system codecs
-        raise AtlasError(f"Could not decode audio: {exc}", 400, "invalid_audio") from exc
+        import soundfile as sf
+        audio, sr = sf.read(io.BytesIO(audio_bytes), dtype="float32", always_2d=True)
+        audio = audio.mean(axis=1)
+        if sr != TARGET_SR:
+            import librosa
+            audio = librosa.resample(audio, orig_sr=sr, target_sr=TARGET_SR)
+        return np.ascontiguousarray(audio, dtype=np.float32), TARGET_SR
+    except Exception:
+        return _ffmpeg_decode(audio_bytes), TARGET_SR
+
+
+def _ffmpeg_decode(audio_bytes: bytes):
+    import numpy as np
+
+    if not shutil.which("ffmpeg"):
+        raise AtlasError("Could not decode audio: this format needs ffmpeg on the server", 400, "invalid_audio")
+    # A temporary file, not a pipe: m4a files often keep their index at the end, so ffmpeg must seek.
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(audio_bytes)
+        f.flush()
+        proc = subprocess.run(["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-i", f.name,
+                               "-f", "f32le", "-ac", "1", "-ar", str(TARGET_SR), "pipe:1"],
+                              capture_output=True, timeout=120)
+    if proc.returncode != 0 or not proc.stdout:
+        detail = proc.stderr.decode(errors="replace").strip().splitlines()[-1:] or ["no audio stream"]
+        raise AtlasError(f"Could not decode audio: {detail[0]}", 400, "invalid_audio")
+    return np.frombuffer(proc.stdout, dtype=np.float32).copy()
 
 
 class WhisperTranscriber:
