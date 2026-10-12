@@ -319,6 +319,10 @@ footer a{color:inherit}
   </nav>
 
   <main id="workspace" tabindex="-1">
+    <div class="keybar" id="wakeBar" role="status" hidden>
+      <strong>Waking up N-ATLaS</strong>
+      <p>To save running costs, the GPU behind this demo sleeps when nobody is using it. Starting it takes about 1–3 minutes, then answers come at normal speed. This page connects by itself when it's ready.</p>
+    </div>
     <div class="keybar" id="keyBar" hidden>
       <strong>Welcome</strong>
       <p>Paste the API key from your invite to start building with N-ATLaS.</p>
@@ -554,10 +558,22 @@ async function connect() {
   store.set("atlas.url", base()); store.set("atlas.key", $("apiKey").value.trim());
   $("keyBar").hidden = !!$("apiKey").value.trim();
   setStatus("wait", "Checking…");
-  try {
-    const h = await (await fetch(base() + "/health")).json();
-    if (!h.upstream) { setStatus("wait", "Model is loading"); return; }
-  } catch { setStatus("bad", "Gateway not reachable"); return; }
+  // The hosted playground's backend scales to zero, so give a sleeping GPU time to start (up to 6 minutes).
+  const started = Date.now(), patience = HOSTED_API ? 360e3 : 0;
+  for (;;) {
+    let h = null;
+    try { h = await (await fetch(base() + "/health")).json(); } catch {}
+    if (h?.upstream) break;
+    const waited = Date.now() - started;
+    if (waited >= patience) {
+      $("wakeBar").hidden = true;
+      setStatus(h ? "wait" : "bad", h ? "Model is loading" : "Gateway not reachable"); return;
+    }
+    $("wakeBar").hidden = false;
+    setStatus("wait", `Waking up N-ATLaS · ${Math.round(waited / 1000)}s`);
+    await new Promise((r) => setTimeout(r, 5000));
+  }
+  $("wakeBar").hidden = true;
   try {
     const models = (await api("/v1/models")).data.filter((m) => !m.task);
     chatModels = models.map((m) => ({ id: m.id, label: m.id === "n-atlas" ? "N-ATLaS (base)" : `${m.id} (fine-tuned)` }));

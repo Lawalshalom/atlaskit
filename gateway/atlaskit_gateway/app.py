@@ -128,6 +128,14 @@ def create_app(settings: Settings | None = None, transcriber: Any = None,
             "asr_loaded": transcriber.loaded() if hasattr(transcriber, "loaded") else [],
         }, status_code=200 if upstream_ok else 503)
 
+    async def ping(request: Request):
+        """Readiness probe for load balancers such as RunPod Serverless: 204 while N-ATLaS is loading, 200 once it answers."""
+        try:
+            ready = (await client.get("/models", timeout=3)).status_code == 200
+        except httpx.HTTPError:
+            ready = False
+        return Response(status_code=200 if ready else 204)
+
     @endpoint("models")
     async def models(request: Request):
         now = int(time.time())
@@ -279,6 +287,7 @@ def create_app(settings: Settings | None = None, transcriber: Any = None,
     routes = [
         Route("/", playground),
         Route("/health", health),
+        Route("/ping", ping),
         Route("/v1/models", models),
         Route("/v1/chat/completions", chat, methods=["POST"]),
         Route("/v1/audio/transcriptions", transcriptions, methods=["POST"]),

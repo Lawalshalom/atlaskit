@@ -75,6 +75,16 @@ def test_health_and_models(atlas):
     assert ids[0] == "n-atlas" and "NCAIR1/Yoruba-ASR" in ids
 
 
+def test_ping_reports_readiness(gateway):
+    import urllib.request
+    assert urllib.request.urlopen(gateway["url"] + "/ping").status == 200
+    # A gateway whose model server is still loading answers 204, so load balancers hold traffic back.
+    app = create_app(Settings(upstream_url=f"http://127.0.0.1:{free_port()}/v1", api_keys=frozenset({KEY}), enable_asr=False,
+                              log_path=str(gateway["log"].parent / "ping.jsonl")))
+    from starlette.testclient import TestClient
+    assert TestClient(app).get("/ping").status_code == 204
+
+
 def test_auth_required(gateway):
     with pytest.raises(AtlasKitError) as e:
         AtlasKit(gateway["url"], api_key="wrong", max_retries=0).chat("hi")
