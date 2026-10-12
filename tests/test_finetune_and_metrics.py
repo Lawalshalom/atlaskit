@@ -65,3 +65,17 @@ def test_asr_error_rates():
     assert normalise_transcript("Ẹ kú àárọ̀", keep_tones=False) == "e ku aaro"
     errs = asr_errors("e ku aaro", "Ẹ kú àárọ̀.")
     assert errs["words"] == 3 and errs["word_errors"] == 3 and errs["bare_word_errors"] == 0
+
+
+def test_corpus_chrf_and_paired_bootstrap():
+    from run_eval import chrf, chrf_stats, corpus_chrf, paired_bootstrap
+    refs = ["Ẹ kú àárọ̀", "Fọ ọwọ́ rẹ kí o tó jẹun", "Owó ọjà ti gòkè"]
+    good = list(refs)
+    bad = ["E ku aaro", "Wẹ ọwọ́", "Owo oja"]
+    assert corpus_chrf(list(zip(good, refs))) == 100.0
+    assert corpus_chrf([(good[0], refs[0])]) == chrf(good[0], refs[0])
+    a = [chrf_stats(h, r) for h, r in zip(bad, refs)]
+    b = [chrf_stats(h, r) for h, r in zip(good, refs)]
+    res = paired_bootstrap(a, b, resamples=200)
+    assert res["delta"] > 0 and res["ci95"][0] > 0 and res["b_better_share"] == 1.0
+    assert paired_bootstrap(a, a, resamples=50)["delta"] == 0

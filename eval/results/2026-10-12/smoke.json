@@ -1,0 +1,293 @@
+{
+  "dataset": "eval/data/smoke.jsonl",
+  "n_items": 14,
+  "started": "2026-10-12 10:16:55",
+  "endpoints": {
+    "base": {
+      "url": "http://127.0.0.1:8080",
+      "model": "n-atlas",
+      "summary": {
+        "lid:en": {
+          "n": 2,
+          "mean": 1.0
+        },
+        "lid:ha": {
+          "n": 2,
+          "mean": 1.0
+        },
+        "lid:ig": {
+          "n": 2,
+          "mean": 1.0
+        },
+        "lid:yo": {
+          "n": 2,
+          "mean": 1.0
+        },
+        "qa:en": {
+          "n": 3,
+          "mean": 1.0
+        },
+        "qa:ha": {
+          "n": 1,
+          "mean": 1.0
+        },
+        "qa:ig": {
+          "n": 1,
+          "mean": 1.0
+        },
+        "qa:yo": {
+          "n": 1,
+          "mean": 1.0
+        },
+        "_overall": {
+          "n": 14,
+          "errors": 0,
+          "median_latency_s": 0.097
+        }
+      },
+      "results": [
+        {
+          "task": "lid",
+          "output": "yo",
+          "score": 1.0,
+          "group": "lid:yo",
+          "latency_s": 0.097
+        },
+        {
+          "task": "lid",
+          "output": "yo",
+          "score": 1.0,
+          "group": "lid:yo",
+          "latency_s": 0.095
+        },
+        {
+          "task": "lid",
+          "output": "ha",
+          "score": 1.0,
+          "group": "lid:ha",
+          "latency_s": 0.097
+        },
+        {
+          "task": "lid",
+          "output": "ha",
+          "score": 1.0,
+          "group": "lid:ha",
+          "latency_s": 0.091
+        },
+        {
+          "task": "lid",
+          "output": "ig",
+          "score": 1.0,
+          "group": "lid:ig",
+          "latency_s": 0.001
+        },
+        {
+          "task": "lid",
+          "output": "ig",
+          "score": 1.0,
+          "group": "lid:ig",
+          "latency_s": 0.001
+        },
+        {
+          "task": "lid",
+          "output": "en",
+          "score": 1.0,
+          "group": "lid:en",
+          "latency_s": 0.001
+        },
+        {
+          "task": "lid",
+          "output": "en",
+          "score": 1.0,
+          "group": "lid:en",
+          "latency_s": 0.001
+        },
+        {
+          "task": "qa",
+          "output": "The capital city of Nigeria is Abuja.",
+          "score": 1.0,
+          "group": "qa:en",
+          "latency_s": 0.235
+        },
+        {
+          "task": "qa",
+          "output": "Olú ìlú Nàìjíríà ni Abuja.",
+          "score": 1.0,
+          "group": "qa:yo",
+          "latency_s": 0.373
+        },
+        {
+          "task": "qa",
+          "output": "Babban birnin Najeriya shine Abuja.",
+          "score": 1.0,
+          "group": "qa:ha",
+          "latency_s": 0.294
+        },
+        {
+          "task": "qa",
+          "output": "Isi obodo Naijiria bụ Abuja.",
+          "score": 1.0,
+          "group": "qa:ig",
+          "latency_s": 0.313
+        },
+        {
+          "task": "qa",
+          "output": "The river that joins the Niger at Lokoja is the Benue River.",
+          "score": 1.0,
+          "group": "qa:en",
+          "latency_s": 0.37
+        },
+        {
+          "task": "qa",
+          "output": "Nigeria's currency is called the Naira (NGN).",
+          "score": 1.0,
+          "group": "qa:en",
+          "latency_s": 0.311
+        }
+      ]
+    },
+    "tuned": {
+      "url": "http://127.0.0.1:8080",
+      "model": "natlas-mt",
+      "summary": {
+        "lid:en": {
+          "n": 2,
+          "mean": 1.0
+        },
+        "lid:ha": {
+          "n": 2,
+          "mean": 1.0
+        },
+        "lid:ig": {
+          "n": 2,
+          "mean": 1.0
+        },
+        "lid:yo": {
+          "n": 2,
+          "mean": 1.0
+        },
+        "qa:en": {
+          "n": 3,
+          "mean": 1.0
+        },
+        "qa:ha": {
+          "n": 1,
+          "mean": 1.0
+        },
+        "qa:ig": {
+          "n": 1,
+          "mean": 1.0
+        },
+        "qa:yo": {
+          "n": 1,
+          "mean": 1.0
+        },
+        "_overall": {
+          "n": 14,
+          "errors": 0,
+          "median_latency_s": 0.002
+        }
+      },
+      "results": [
+        {
+          "task": "lid",
+          "output": "yo",
+          "score": 1.0,
+          "group": "lid:yo",
+          "latency_s": 0.002
+        },
+        {
+          "task": "lid",
+          "output": "yo",
+          "score": 1.0,
+          "group": "lid:yo",
+          "latency_s": 0.002
+        },
+        {
+          "task": "lid",
+          "output": "ha",
+          "score": 1.0,
+          "group": "lid:ha",
+          "latency_s": 0.002
+        },
+        {
+          "task": "lid",
+          "output": "ha",
+          "score": 1.0,
+          "group": "lid:ha",
+          "latency_s": 0.002
+        },
+        {
+          "task": "lid",
+          "output": "ig",
+          "score": 1.0,
+          "group": "lid:ig",
+          "latency_s": 0.002
+        },
+        {
+          "task": "lid",
+          "output": "ig",
+          "score": 1.0,
+          "group": "lid:ig",
+          "latency_s": 0.002
+        },
+        {
+          "task": "lid",
+          "output": "en",
+          "score": 1.0,
+          "group": "lid:en",
+          "latency_s": 0.002
+        },
+        {
+          "task": "lid",
+          "output": "en",
+          "score": 1.0,
+          "group": "lid:en",
+          "latency_s": 0.002
+        },
+        {
+          "task": "qa",
+          "output": "The capital city of Nigeria is Abuja.",
+          "score": 1.0,
+          "group": "qa:en",
+          "latency_s": 0.241
+        },
+        {
+          "task": "qa",
+          "output": "Abala ilu ti orile ede Naijiria ni Abuja.",
+          "score": 1.0,
+          "group": "qa:yo",
+          "latency_s": 0.44
+        },
+        {
+          "task": "qa",
+          "output": "Babban birnin Najeriya shine Abuja.",
+          "score": 1.0,
+          "group": "qa:ha",
+          "latency_s": 0.309
+        },
+        {
+          "task": "qa",
+          "output": "Isi obodo Naijiria bụ Abuja.",
+          "score": 1.0,
+          "group": "qa:ig",
+          "latency_s": 0.331
+        },
+        {
+          "task": "qa",
+          "output": "The river that joins the Niger at Lokoja is the Benue River.",
+          "score": 1.0,
+          "group": "qa:en",
+          "latency_s": 0.417
+        },
+        {
+          "task": "qa",
+          "output": "Nigeria's currency is called Naira (NGN).",
+          "score": 1.0,
+          "group": "qa:en",
+          "latency_s": 0.326
+        }
+      ]
+    }
+  }
+}

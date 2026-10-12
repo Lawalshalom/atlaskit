@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
 import statistics
 import sys
 import time
@@ -62,16 +63,19 @@ def chrf(hypothesis: str, reference: str, order: int = 6, beta: float = 2.0) -> 
     return 100 * (1 + b2) * p * r / (b2 * p + r)
 
 
-def corpus_chrf(pairs: list[tuple[str, str]], order: int = 6, beta: float = 2.0) -> float:
-    """Corpus-level chrF: n-gram statistics summed over all segments (as sacrebleu does)."""
-    precisions, recalls = [], []
+def chrf_stats(hypothesis: str, reference: str, order: int = 6) -> list[int]:
+    """Per n-gram order: matches, hypothesis n-grams, reference n-grams. Summed over segments they give corpus chrF."""
+    row = []
     for n in range(1, order + 1):
-        overlap = hyp_total = ref_total = 0
-        for hyp, ref in pairs:
-            h, r = _ngrams(hyp, n), _ngrams(ref, n)
-            overlap += sum((h & r).values())
-            hyp_total += sum(h.values())
-            ref_total += sum(r.values())
+        h, r = _ngrams(hypothesis, n), _ngrams(reference, n)
+        row += [sum((h & r).values()), sum(h.values()), sum(r.values())]
+    return row
+
+
+def chrf_from_stats(stats: list[int], beta: float = 2.0) -> float:
+    precisions, recalls = [], []
+    for k in range(0, len(stats), 3):
+        overlap, hyp_total, ref_total = stats[k:k + 3]
         if hyp_total and ref_total:
             precisions.append(overlap / hyp_total)
             recalls.append(overlap / ref_total)
@@ -80,6 +84,47 @@ def corpus_chrf(pairs: list[tuple[str, str]], order: int = 6, beta: float = 2.0)
     p, r = statistics.mean(precisions), statistics.mean(recalls)
     b2 = beta ** 2
     return 0.0 if p + r == 0 else 100 * (1 + b2) * p * r / (b2 * p + r)
+
+
+def _column_sums(rows) -> list[int]:
+    return [sum(col) for col in zip(*rows)]
+
+
+def corpus_chrf(pairs: list[tuple[str, str]], order: int = 6, beta: float = 2.0) -> float:
+    """Corpus-level chrF: n-gram statistics summed over all segments (as sacrebleu does)."""
+    return chrf_from_stats(_column_sums(chrf_stats(h, r, order) for h, r in pairs), beta)
+
+
+def paired_bootstrap(stats_a: list[list[int]], stats_b: list[list[int]], resamples: int = 1000,
+                     seed: int = 0) -> dict:
+    """Paired bootstrap resampling (Koehn, 2004) of corpus chrF for system B minus system A.
+
+    Both systems are scored on the same resampled sentences each round; the
+    result gives the observed difference, a 95% interval and how often B wins.
+    """
+    rng = random.Random(seed)
+    n = len(stats_a)
+    deltas = []
+    for _ in range(resamples):
+        idx = [rng.randrange(n) for _ in range(n)]
+        deltas.append(chrf_from_stats(_column_sums(stats_b[i] for i in idx))
+                      - chrf_from_stats(_column_sums(stats_a[i] for i in idx)))
+    deltas.sort()
+    observed = chrf_from_stats(_column_sums(stats_b)) - chrf_from_stats(_column_sums(stats_a))
+    return {"delta": round(observed, 2),
+            "ci95": [round(deltas[int(0.025 * resamples)], 2), round(deltas[int(0.975 * resamples) - 1], 2)],
+            "b_better_share": round(sum(d > 0 for d in deltas) / resamples, 3), "resamples": resamples}
+
+
+def compare_translations(items: list[dict], results_a: list[dict], results_b: list[dict]) -> dict:
+    """Paired bootstrap per translation direction, for two endpoints run on the same items."""
+    groups: dict[str, tuple[list, list]] = defaultdict(lambda: ([], []))
+    for item, a, b in zip(items, results_a, results_b):
+        if item["task"] == "translate" and "output" in a and "output" in b:
+            ga, gb = groups[a["group"]]
+            ga.append(chrf_stats(a["output"], item["reference"]))
+            gb.append(chrf_stats(b["output"], item["reference"]))
+    return {g: paired_bootstrap(sa, sb) for g, (sa, sb) in sorted(groups.items())}
 
 
 def normalise(s: str) -> str:
@@ -272,6 +317,14 @@ def to_markdown(report: dict) -> str:
         ep = report["endpoints"][name]
         o = ep["summary"]["_overall"]
         lines.append(f"- **{name}** (`{ep['model']}`): {o['errors']} errors, median latency {o['median_latency_s']}s")
+    for label, groups in report.get("comparisons", {}).items():
+        if not groups:
+            continue
+        lines += ["", f"## {label}: paired bootstrap of corpus chrF", "",
+                  "| Group | Δ chrF | 95% interval | resamples where the second system is better |", "|---|---|---|---|"]
+        for g, c in groups.items():
+            lines.append(f"| {g} | {c['delta']:+.2f} | [{c['ci95'][0]:+.2f}, {c['ci95'][1]:+.2f}] | "
+                         f"{100 * c['b_better_share']:.1f}% of {c['resamples']} |")
     return "\n".join(lines) + "\n"
 
 
@@ -322,6 +375,12 @@ def main(argv: list[str] | None = None) -> int:
         print(file=sys.stderr)
         report["endpoints"][name] = {"url": url, "model": model or "n-atlas",
                                      "summary": summarise(items, results), "results": results}
+
+    names = list(report["endpoints"])
+    if len(names) > 1:
+        first = report["endpoints"][names[0]]["results"]
+        report["comparisons"] = {f"{other} vs {names[0]}": compare_translations(
+            items, first, report["endpoints"][other]["results"]) for other in names[1:]}
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)

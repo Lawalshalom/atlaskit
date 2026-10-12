@@ -16,6 +16,14 @@ Built by **Halo Media and Digital Limited (Halo Digital)** for the National AI I
 | **Evaluation harness** (`eval/`) | Benchmarks one or more N-ATLaS deployments or adapters (for example base vs fine-tuned) on FLORES+ translation (chrF), FLEURS speech recognition (WER/CER), language ID and QA. It writes JSON and Markdown reports. |
 | **RunPod deployment** (`deploy/runpod/`) | Two scripts take a GPU pod to a public HTTPS endpoint. |
 
+## Measured results
+
+These come from live runs on one RTX PRO 4500 GPU on 12 Oct 2026. Details and raw outputs are in [`eval/results/2026-10-12/`](eval/results/2026-10-12/README.md).
+
+- **Translation (FLORES+ devtest, 1,012 sentences per direction, chrF):** base N-ATLaS scores 48.89 for English → Hausa, 40.45 for English → Igbo and 26.55 for English → Yoruba. A 14-minute AtlasKit LoRA fine-tune raises these by **+1.21**, **+0.61** and **+1.20**. A paired bootstrap shows all three gains are significant.
+- **Speech (FLEURS, 100 recordings per language):** the official N-ATLaS ASR models score a word error rate (WER) of 33.7% on Hausa, 36.9% on Igbo and 57.5% on Yoruba. Yoruba drops to 30.2% when tone marks are ignored.
+- **Reliability:** 0 failed requests across 6,400+ benchmark requests.
+
 ## Why
 
 N-ATLaS is downloadable, but every team that wants to use it currently has to repeat the same work:

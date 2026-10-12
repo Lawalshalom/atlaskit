@@ -1,0 +1,41 @@
+2991 training examples (0 skipped as too long)
+trainable params: 41,943,040 || all params: 8,072,204,288 || trainable%: 0.5196
+epoch 1 step 10/374 loss 1.6590 lr 1.11e-04 23s
+epoch 1 step 20/374 loss 1.5855 lr 2.00e-04 46s
+epoch 1 step 30/374 loss 1.4552 lr 1.99e-04 69s
+epoch 1 step 40/374 loss 1.4292 lr 1.98e-04 92s
+epoch 1 step 50/374 loss 1.4240 lr 1.96e-04 114s
+epoch 1 step 60/374 loss 1.4046 lr 1.93e-04 138s
+epoch 1 step 70/374 loss 1.4098 lr 1.90e-04 161s
+epoch 1 step 80/374 loss 1.4011 lr 1.85e-04 183s
+epoch 1 step 90/374 loss 1.3958 lr 1.80e-04 206s
+epoch 1 step 100/374 loss 1.3874 lr 1.75e-04 228s
+epoch 1 step 110/374 loss 1.3688 lr 1.69e-04 249s
+epoch 1 step 120/374 loss 1.3342 lr 1.62e-04 271s
+epoch 1 step 130/374 loss 1.3375 lr 1.55e-04 293s
+epoch 1 step 140/374 loss 1.3848 lr 1.47e-04 316s
+epoch 1 step 150/374 loss 1.3895 lr 1.39e-04 339s
+epoch 1 step 160/374 loss 1.3451 lr 1.31e-04 362s
+epoch 1 step 170/374 loss 1.3258 lr 1.23e-04 385s
+epoch 1 step 180/374 loss 1.3399 lr 1.14e-04 407s
+epoch 2 step 190/374 loss 1.2881 lr 1.05e-04 430s
+epoch 2 step 200/374 loss 1.1073 lr 9.65e-05 453s
+epoch 2 step 210/374 loss 0.9740 lr 8.77e-05 476s
+epoch 2 step 220/374 loss 0.9827 lr 7.90e-05 500s
+epoch 2 step 230/374 loss 0.9565 lr 7.04e-05 522s
+epoch 2 step 240/374 loss 0.9185 lr 6.21e-05 544s
+epoch 2 step 250/374 loss 0.9525 lr 5.41e-05 566s
+epoch 2 step 260/374 loss 0.9355 lr 4.65e-05 588s
+epoch 2 step 270/374 loss 0.9207 lr 3.92e-05 611s
+epoch 2 step 280/374 loss 0.9183 lr 3.25e-05 633s
+epoch 2 step 290/374 loss 0.9184 lr 2.62e-05 656s
+epoch 2 step 300/374 loss 0.9141 lr 2.06e-05 678s
+epoch 2 step 310/374 loss 0.9202 lr 1.55e-05 701s
+epoch 2 step 320/374 loss 0.9535 lr 1.11e-05 724s
+epoch 2 step 330/374 loss 0.9524 lr 7.44e-06 747s
+epoch 2 step 340/374 loss 0.9280 lr 4.47e-06 769s
+epoch 2 step 350/374 loss 0.9295 lr 2.23e-06 792s
+epoch 2 step 360/374 loss 0.9700 lr 7.62e-07 815s
+epoch 2 step 370/374 loss 0.9552 lr 6.23e-08 837s
+epoch 2 step 374/374 loss 0.9351 lr 0.00e+00 846s
+Saved adapter to /workspace/adapters/natlas-mt: {'base_model': 'NCAIR1/N-ATLaS', 'data': '/root/ft/flores-dev.jsonl', 'examples': 2991, 'epochs': 2, 'steps': 374, 'lr': 0.0002, 'rank': 16, 'batch_size': 8, 'grad_accum': 2, 'first_loss': 2.0117, 'final_loss': 0.9351, 'minutes': 14.1, 'date_string': '12 Oct 2026'}

@@ -58,4 +58,12 @@ The report puts base and fine-tuned corpus chrF side by side for each language.
 
 ## Results
 
-Results are added here after each run, with the exact command and the report file.
+From the first run on 12 October 2026: the adapter was trained for 14 minutes on 2,991 FLORES+ dev pairs, then evaluated on the full FLORES+ devtest (1,012 unseen sentences per direction):
+
+| Direction | Base chrF | Fine-tuned chrF | Δ (95% interval) |
+|---|---|---|---|
+| English → Hausa | 48.89 | 50.10 | +1.21 [+0.68, +1.75] |
+| English → Igbo | 40.45 | 41.06 | +0.61 [+0.12, +1.11] |
+| English → Yoruba | 26.55 | 27.75 | +1.20 [+0.60, +1.82] |
+
+Every direction improves, and the paired bootstrap shows each gain is significant. Full method, raw outputs and logs: [`eval/results/2026-10-12/`](../eval/results/2026-10-12/README.md).

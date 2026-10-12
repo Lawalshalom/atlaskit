@@ -1,0 +1,15 @@
+{
+  "base_model": "NCAIR1/N-ATLaS",
+  "data": "/root/ft/flores-dev.jsonl",
+  "examples": 2991,
+  "epochs": 2,
+  "steps": 374,
+  "lr": 0.0002,
+  "rank": 16,
+  "batch_size": 8,
+  "grad_accum": 2,
+  "first_loss": 2.0117,
+  "final_loss": 0.9351,
+  "minutes": 14.1,
+  "date_string": "12 Oct 2026"
+}
