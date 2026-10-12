@@ -160,11 +160,13 @@ class ChatPlan:
 
 
 def build_chat_request(body: dict[str, Any], upstream_model: str = DEFAULT_MODEL_ID,
-                       now: datetime | None = None) -> ChatPlan:
+                       now: datetime | None = None, adapters: tuple[str, ...] = ()) -> ChatPlan:
     """Turn an OpenAI-style chat request into the request sent to vLLM.
 
-    * accepts friendly model aliases (``n-atlas``) and rejects other models,
-      so a deployment can never silently wrap a different foundation model;
+    * accepts friendly model aliases (``n-atlas``) and the names of LoRA
+      adapters fine-tuned on N-ATLaS (``adapters``, served by vLLM on top of
+      the same base weights) and rejects every other model, so a deployment
+      can never silently wrap a different foundation model;
     * injects the N-ATLaS default system prompt when none is supplied;
     * supports an ``atlas_language`` extension that pins the reply language;
     * passes ``date_string`` to the N-ATLaS chat template;
@@ -173,8 +175,13 @@ def build_chat_request(body: dict[str, Any], upstream_model: str = DEFAULT_MODEL
     if not isinstance(body, dict):
         raise AtlasError("Request body must be a JSON object")
     requested = str(body.get("model") or "n-atlas")
-    if requested.lower() not in MODEL_ALIASES | {upstream_model.lower()}:
-        raise AtlasError(f"Model '{requested}' is not served here. Use 'n-atlas'.", 404, "model_not_found")
+    if requested in adapters:
+        target = requested
+    elif requested.lower() in MODEL_ALIASES | {upstream_model.lower()}:
+        target = upstream_model
+    else:
+        options = ", ".join(["'n-atlas'", *(f"'{a}'" for a in adapters)])
+        raise AtlasError(f"Model '{requested}' is not served here. Use {options}.", 404, "model_not_found")
 
     messages = _validate_messages(body.get("messages"))
     lang = normalize_language(body.get("atlas_language"))
@@ -184,7 +191,7 @@ def build_chat_request(body: dict[str, Any], upstream_model: str = DEFAULT_MODEL
     if lang:
         messages[0] = {**messages[0], "content": messages[0]["content"].rstrip() + "\n" + language_instruction(lang)}
 
-    upstream: dict[str, Any] = {"model": upstream_model, "messages": messages}
+    upstream: dict[str, Any] = {"model": target, "messages": messages}
     for k, v in DEFAULT_GENERATION.items():
         upstream[k] = body.get(k, v)
     passthrough = ("top_p", "stop", "seed", "n", "presence_penalty", "frequency_penalty",
@@ -263,6 +270,7 @@ class Settings:
     log_path: str = "./logs/usage.jsonl"
     cors_origins: tuple[str, ...] = ("*",)
     request_timeout: float = 120.0
+    adapters: tuple[str, ...] = ()   # LoRA adapters on N-ATLaS that vLLM serves (--lora-modules)
 
     @classmethod
     def from_env(cls, env: dict[str, str] | None = None) -> "Settings":
@@ -277,4 +285,5 @@ class Settings:
             log_path=e.get("ATLAS_LOG_PATH", cls.log_path),
             cors_origins=tuple(o.strip() for o in e.get("ATLAS_CORS_ORIGINS", "*").split(",")),
             request_timeout=float(e.get("ATLAS_TIMEOUT", "120")),
+            adapters=tuple(a.strip() for a in e.get("ATLAS_ADAPTERS", "").split(",") if a.strip()),
         )

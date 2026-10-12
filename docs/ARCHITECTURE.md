@@ -26,7 +26,8 @@
 
 - **vLLM for inference.** It provides continuous batching and paged attention, so one 24 GB GPU can serve many concurrent users. The gateway talks to vLLM's OpenAI server, which keeps the inference engine swappable (for example TGI or SGLang) without changing the SDKs.
 - **OpenAI wire format.** It is the de facto standard, so existing tools work against N-ATLaS unchanged. N-ATLaS-specific behaviour is added through optional fields (`atlas_language`) and `/v1/atlas/*` routes, never by breaking the standard ones.
-- **N-ATLaS only.** `build_chat_request` rejects any model that is not N-ATLaS. This guarantees that apps built on AtlasKit really run on the sovereign model.
+- **N-ATLaS only.** `build_chat_request` rejects any model that is not N-ATLaS or a LoRA adapter trained on it. This guarantees that apps built on AtlasKit really run on the sovereign model.
+- **Train as you serve.** The fine-tuning kit renders training examples with the same chat template, `date_string` and task prompts (`translation_messages`) that the gateway uses at inference time, so an adapter sees the same input it was trained on.
 - **Framework-free core.** All request shaping lives in `gateway/atlaskit_gateway/core.py` (pure Python) and is unit-tested without a GPU. The HTTP layer is thin.
 - **Lazy ASR.** Each Whisper-small checkpoint (~1 GB in fp16) loads on first use for its language. That is why vLLM is capped at 80% of GPU memory.
 - **Zero-dependency SDKs.** The Python SDK uses only `urllib` and the JS SDK only `fetch`, so they install anywhere, including low-spec machines and serverless functions.
@@ -39,7 +40,8 @@ gateway/atlaskit_gateway/   core.py (logic) · app.py (HTTP) · asr.py (Whisper)
 sdk/python/atlaskit/        client.py · cli.py
 sdk/js/src/index.js         JS SDK          sdk/js/test/   node:test suite
 playground/index.html       browser playground (served at /)
-eval/                       run_eval.py · data/smoke.jsonl
+eval/                       run_eval.py · data/smoke.jsonl   (FLORES+ chrF, FLEURS WER/CER, LID, QA)
+finetune/                   prepare_flores.py · train_lora.py   (LoRA on N-ATLaS, served via vLLM --enable-lora)
 deploy/runpod/              setup.sh · start.sh · Dockerfile
 tests/                      pytest: core + end-to-end (mock vLLM) + JS SDK + eval harness
 examples/dev_server.py      gateway against a mock model, no GPU

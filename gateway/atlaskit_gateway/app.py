@@ -82,8 +82,10 @@ def create_app(settings: Settings | None = None, transcriber: Any = None,
             raise AtlasError(f"N-ATLaS backend error: {r.text[:500]}", 502, "backend_error")
         return r.json()
 
-    async def complete_text(messages: list[dict], max_tokens: int = 800) -> tuple[str, dict]:
-        plan = build_chat_request({"messages": messages, "max_tokens": max_tokens})
+    async def complete_text(messages: list[dict], max_tokens: int = 800,
+                            model: str | None = None) -> tuple[str, dict]:
+        plan = build_chat_request({"messages": messages, "max_tokens": max_tokens, "model": model},
+                                  s.upstream_model, adapters=s.adapters)
         data = await upstream_chat(plan.upstream_body)
         return clean_completion(data["choices"][0]["message"]["content"]), data.get("usage") or {}
 
@@ -131,6 +133,8 @@ def create_app(settings: Settings | None = None, transcriber: Any = None,
         now = int(time.time())
         data = [{"id": "n-atlas", "object": "model", "created": now, "owned_by": "NCAIR / Awarri",
                  "root": s.upstream_model}]
+        data += [{"id": a, "object": "model", "created": now, "owned_by": "fine-tuned with AtlasKit",
+                  "root": s.upstream_model, "parent": "n-atlas"} for a in s.adapters]
         if transcriber is not None:
             data += [{"id": v["asr_model"], "object": "model", "created": now, "owned_by": "NCAIR",
                       "language": k, "task": "asr"} for k, v in LANGUAGES.items()]
@@ -138,8 +142,8 @@ def create_app(settings: Settings | None = None, transcriber: Any = None,
 
     @endpoint("chat")
     async def chat(request: Request):
-        plan = build_chat_request(await json_body(request), s.upstream_model)
-        meta = {"language": plan.language, "stream": plan.stream}
+        plan = build_chat_request(await json_body(request), s.upstream_model, adapters=s.adapters)
+        meta = {"language": plan.language, "stream": plan.stream, "model": plan.requested_model}
         if not plan.stream:
             data = await upstream_chat(plan.upstream_body)
             data["model"] = plan.requested_model
@@ -216,15 +220,18 @@ def create_app(settings: Settings | None = None, transcriber: Any = None,
     async def translate(request: Request):
         body = await json_body(request)
         msgs = translation_messages(body.get("text", ""), body.get("target"), body.get("source"))
-        text, u = await complete_text(msgs, int(body.get("max_tokens", 800)))
-        return JSONResponse({"translation": text, "source": body.get("source"), "target": body.get("target")}), \
-            {"language": normalize_language(body.get("target")), "completion_tokens": u.get("completion_tokens")}
+        model = body.get("model")
+        text, u = await complete_text(msgs, int(body.get("max_tokens", 800)), model)
+        return JSONResponse({"translation": text, "source": body.get("source"), "target": body.get("target"),
+                             "model": model or "n-atlas"}), \
+            {"language": normalize_language(body.get("target")), "completion_tokens": u.get("completion_tokens"),
+             "model": model or "n-atlas"}
 
     @endpoint("summarize")
     async def summarize(request: Request):
         body = await json_body(request)
         msgs = summary_messages(body.get("text", ""), body.get("language"), int(body.get("max_words", 80)))
-        text, u = await complete_text(msgs)
+        text, u = await complete_text(msgs, model=body.get("model"))
         return JSONResponse({"summary": text}), {"language": body.get("language"),
                                                  "completion_tokens": u.get("completion_tokens")}
 

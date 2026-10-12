@@ -164,13 +164,15 @@ class AtlasKit:
         """Audio question in, text answer in the same language out."""
         return self._multipart("/v1/atlas/voice-chat", audio, {"language": language, "system": system})
 
-    def translate(self, text: str, target: str, source: str | None = None) -> str:
+    def translate(self, text: str, target: str, source: str | None = None, model: str | None = None) -> str:
+        """``model`` selects a fine-tuned N-ATLaS adapter; the default is base N-ATLaS."""
         return self._json("POST", "/v1/atlas/translate",
-                          {"text": text, "target": target, "source": source})["translation"]
+                          {"text": text, "target": target, "source": source, "model": model})["translation"]
 
-    def summarize(self, text: str, language: str | None = None, max_words: int = 80) -> str:
+    def summarize(self, text: str, language: str | None = None, max_words: int = 80,
+                  model: str | None = None) -> str:
         return self._json("POST", "/v1/atlas/summarize",
-                          {"text": text, "language": language, "max_words": max_words})["summary"]
+                          {"text": text, "language": language, "max_words": max_words, "model": model})["summary"]
 
     def detect_language(self, text: str) -> dict:
         return self._json("POST", "/v1/atlas/detect-language", {"text": text})

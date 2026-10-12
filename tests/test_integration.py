@@ -45,7 +45,7 @@ def free_port():
 def gateway(tmp_path_factory):
     srv, up_port = mock_vllm.start()
     log = tmp_path_factory.mktemp("logs") / "usage.jsonl"
-    settings = Settings(upstream_url=f"http://127.0.0.1:{up_port}/v1", api_keys=frozenset({KEY}),
+    settings = Settings(upstream_url=f"http://127.0.0.1:{up_port}/v1", api_keys=frozenset({KEY}), adapters=("natlas-mt",),
                         enable_asr=False, log_path=str(log))
     asr = FakeTranscriber()
     app = create_app(settings, transcriber=asr)
@@ -109,6 +109,19 @@ def test_other_model_rejected(gateway):
     assert e.value.status == 404
 
 
+def test_fine_tuned_adapter_is_routed(atlas):
+    assert {"id": "natlas-mt", "parent": "n-atlas"}.items() <= next(m for m in atlas.models() if m["id"] == "natlas-mt").items()
+    assert atlas.chat("Sannu", model="natlas-mt").raw["model"] == "natlas-mt"
+    assert mock_vllm.LAST_REQUEST["model"] == "natlas-mt"
+    atlas.translate("Good morning", "yo", "en", model="natlas-mt")
+    assert mock_vllm.LAST_REQUEST["model"] == "natlas-mt"
+    atlas.translate("Good morning", "yo", "en")
+    assert mock_vllm.LAST_REQUEST["model"] == "NCAIR1/N-ATLaS"
+    with pytest.raises(AtlasKitError) as e:
+        atlas.chat("x", model="natlas-other")
+    assert e.value.status == 404
+
+
 def test_translate_detect_summarize(atlas):
     assert atlas.translate("Good morning", "yo", "en").startswith("echo:")
     assert atlas.detect_language("Ina kwana? Lafiya lau.")["language"] == "ha"
@@ -144,14 +157,25 @@ def test_openai_compatible_raw_http(gateway):
 
 
 def test_eval_harness(gateway, tmp_path):
-    out = subprocess.run([sys.executable, str(ROOT / "eval/run_eval.py"), "--data", str(ROOT / "eval/data/smoke.jsonl"),
-                          "--endpoint", f"mock={gateway['url']}", "--api-key", KEY, "--out", str(tmp_path)],
+    wav = tmp_path / "clip.wav"
+    wav.write_bytes(b"RIFF" + b"\0" * 100)
+    data = tmp_path / "data.jsonl"
+    data.write_text((ROOT / "eval/data/smoke.jsonl").read_text(encoding="utf-8") + json.dumps(
+        {"task": "asr", "audio": str(wav), "language": "yo", "reference": "Bàwo ni ọjà ṣe ń lọ?"}) + "\n",
+        encoding="utf-8")
+    out = subprocess.run([sys.executable, str(ROOT / "eval/run_eval.py"), "--data", str(data),
+                          "--endpoint", f"mock={gateway['url']}", "--endpoint", f"tuned={gateway['url']}#natlas-mt",
+                          "--api-key", KEY, "--out", str(tmp_path / "reports")],
                          capture_output=True, text=True, timeout=60)
     assert out.returncode == 0, out.stderr
-    report = json.loads(next(tmp_path.glob("*.json")).read_text(encoding="utf-8"))
+    report = json.loads(next((tmp_path / "reports").glob("*.json")).read_text(encoding="utf-8"))
     summ = report["endpoints"]["mock"]["summary"]
     assert summ["_overall"]["errors"] == 0
     assert summ["lid:yo"]["mean"] == 1.0 and summ["qa:en"]["mean"] > 0
+    # FakeTranscriber says "Bawo ni oja se n lo": 5 of the 6 words differ only in tone marks
+    assert summ["asr:yo"]["wer"] == 83.3 and summ["asr:yo"]["wer_no_diacritics"] == 0.0
+    assert report["endpoints"]["tuned"]["model"] == "natlas-mt"
+    assert report["endpoints"]["tuned"]["summary"]["_overall"]["errors"] == 0
 
 
 @pytest.mark.skipif(not shutil.which("node"), reason="node not installed")

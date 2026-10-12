@@ -8,19 +8,27 @@ Task types (one JSON object per line):
   {"task": "translate", "source": "en", "target": "yo", "input": "...", "reference": "..."}
   {"task": "lid",       "input": "...", "label": "ha"}
   {"task": "qa",        "input": "...", "answers": ["Abuja"], "language": "en"}
+  {"task": "asr",       "audio": "path.wav", "language": "yo", "reference": "..."}
+
+An endpoint is name=URL, optionally with #model to pick a fine-tuned N-ATLaS
+adapter served by that gateway (see finetune/README.md).
 
 Usage:
   python eval/run_eval.py --data eval/data/smoke.jsonl --endpoint base=http://localhost:8080
-  python eval/run_eval.py --flores yo,ha,ig --limit 100 --endpoint base=URL --endpoint tuned=URL2
+  python eval/run_eval.py --flores yo,ha,ig --limit 100 --endpoint base=URL --endpoint tuned=URL#natlas-mt
+  python eval/run_eval.py --fleurs yo,ha,ig --limit 100 --endpoint base=URL
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import statistics
 import sys
 import time
+import unicodedata
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "sdk" / "python"))
@@ -79,6 +87,38 @@ def normalise(s: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Speech recognition: word and character error rates
+# ---------------------------------------------------------------------------
+
+def normalise_transcript(s: str, keep_tones: bool = True) -> str:
+    """Lowercase, NFC, punctuation removed. With keep_tones=False, diacritics are stripped too."""
+    s = unicodedata.normalize("NFD" if not keep_tones else "NFC", s.lower())
+    if not keep_tones:
+        s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    s = "".join(" " if unicodedata.category(c).startswith("P") else c for c in s)
+    return " ".join(s.split())
+
+
+def edit_distance(a: list | str, b: list | str) -> int:
+    prev = list(range(len(b) + 1))
+    for i, x in enumerate(a, 1):
+        cur = [i]
+        for j, y in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (x != y)))
+        prev = cur
+    return prev[-1]
+
+
+def asr_errors(hypothesis: str, reference: str) -> dict:
+    """Edit counts for corpus WER/CER, plus WER with tone marks and other diacritics ignored."""
+    hyp, ref = normalise_transcript(hypothesis), normalise_transcript(reference)
+    hyp_bare, ref_bare = normalise_transcript(hypothesis, False), normalise_transcript(reference, False)
+    return {"word_errors": edit_distance(hyp.split(), ref.split()), "words": len(ref.split()),
+            "char_errors": edit_distance(hyp, ref), "chars": len(ref),
+            "bare_word_errors": edit_distance(hyp_bare.split(), ref_bare.split())}
+
+
+# ---------------------------------------------------------------------------
 # Data loading
 # ---------------------------------------------------------------------------
 
@@ -107,25 +147,69 @@ def load_flores(langs: list[str], limit: int, split: str = "devtest") -> list[di
     return items
 
 
+FLEURS_CODES = {"yo": "yo_ng", "ha": "ha_ng", "ig": "ig_ng"}
+
+
+def load_fleurs(langs: list[str], limit: int, split: str = "test") -> list[dict]:
+    """Speech items from FLEURS (read speech with human transcripts), one recording per sentence."""
+    import tarfile
+
+    from huggingface_hub import hf_hub_download
+
+    cache = Path(os.environ.get("HF_HOME", "~/.cache/huggingface")).expanduser() / "atlaskit-fleurs"
+    items = []
+    for lang in langs:
+        code = FLEURS_CODES[lang]
+        tsv = hf_hub_download("google/fleurs", f"data/{code}/{split}.tsv", repo_type="dataset")
+        refs: dict[str, str] = {}
+        seen: set[str] = set()
+        with open(tsv, encoding="utf-8") as f:
+            for line in f:
+                cols = line.rstrip("\n").split("\t")
+                if len(cols) < 4 or cols[0] in seen:
+                    continue
+                seen.add(cols[0])
+                refs[cols[1]] = cols[3]          # file name -> normalised transcription
+                if len(refs) >= limit:
+                    break
+        out_dir = cache / f"{code}-{split}"
+        if any(not (out_dir / name).exists() for name in refs):
+            archive = hf_hub_download("google/fleurs", f"data/{code}/audio/{split}.tar.gz", repo_type="dataset")
+            out_dir.mkdir(parents=True, exist_ok=True)
+            with tarfile.open(archive) as tar:
+                for member in tar:
+                    name = Path(member.name).name
+                    if member.isfile() and name in refs:
+                        (out_dir / name).write_bytes(tar.extractfile(member).read())
+        items += [{"task": "asr", "language": lang, "audio": str(out_dir / name), "reference": ref}
+                  for name, ref in refs.items()]
+    return items
+
+
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
 
-def run_item(client: AtlasKit, item: dict) -> dict:
+def run_item(client: AtlasKit, item: dict, model: str | None = None) -> dict:
     t0 = time.perf_counter()
     task = item["task"]
     out: dict = {"task": task}
     try:
         if task == "translate":
-            hyp = client.translate(item["input"], item["target"], item.get("source"))
+            hyp = client.translate(item["input"], item["target"], item.get("source"), model=model)
             out.update(output=hyp, score=chrf(hyp, item["reference"]), group=f"{item.get('source', '?')}->{item['target']}")
         elif task == "lid":
             pred = client.detect_language(item["input"])["language"]
             out.update(output=pred, score=float(pred == item["label"]), group=f"lid:{item['label']}")
         elif task == "qa":
-            reply = client.chat(item["input"], language=item.get("language"), max_tokens=200).text
+            params = {"model": model} if model else {}
+            reply = client.chat(item["input"], language=item.get("language"), max_tokens=200, **params).text
             hit = any(normalise(a) in normalise(reply) for a in item["answers"])
             out.update(output=reply, score=float(hit), group=f"qa:{item.get('language') or 'auto'}")
+        elif task == "asr":
+            text = client.transcribe(item["audio"], item["language"])["text"]
+            errs = asr_errors(text, item["reference"])
+            out.update(output=text, score=errs["word_errors"] / max(errs["words"], 1), group=f"asr:{item['language']}", **errs)
         else:
             raise ValueError(f"unknown task {task}")
     except (AtlasKitError, ValueError, KeyError) as exc:
@@ -137,15 +221,24 @@ def run_item(client: AtlasKit, item: dict) -> dict:
 def summarise(items: list[dict], results: list[dict]) -> dict:
     groups: dict[str, list[float]] = defaultdict(list)
     pairs: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    asr: dict[str, Counter] = defaultdict(Counter)
     for item, res in zip(items, results):
         groups[res["group"]].append(res["score"])
         if item["task"] == "translate" and "output" in res:
             pairs[res["group"]].append((res["output"], item["reference"]))
+        if item["task"] == "asr" and "words" in res:
+            asr[res["group"]].update({k: res[k] for k in ("word_errors", "words", "char_errors", "chars",
+                                                           "bare_word_errors")})
     summary = {}
     for g, scores in sorted(groups.items()):
         entry = {"n": len(scores), "mean": round(statistics.mean(scores), 4)}
         if g in pairs:
             entry["corpus_chrf"] = round(corpus_chrf(pairs[g]), 2)
+        if g in asr:
+            c = asr[g]
+            entry.update(wer=round(100 * c["word_errors"] / max(c["words"], 1), 1),
+                         cer=round(100 * c["char_errors"] / max(c["chars"], 1), 1),
+                         wer_no_diacritics=round(100 * c["bare_word_errors"] / max(c["words"], 1), 1))
         summary[g] = entry
     lat = [r["latency_s"] for r in results]
     summary["_overall"] = {"n": len(results), "errors": sum(1 for r in results if "error" in r),
@@ -167,12 +260,18 @@ def to_markdown(report: dict) -> str:
                 cells.append("-")
                 continue
             n = e["n"]
-            cells.append(f"chrF {e['corpus_chrf']}" if "corpus_chrf" in e else f"{e['mean'] * 100:.1f}%")
+            if "corpus_chrf" in e:
+                cells.append(f"chrF {e['corpus_chrf']}")
+            elif "wer" in e:
+                cells.append(f"WER {e['wer']}% · CER {e['cer']}% · WER without diacritics {e['wer_no_diacritics']}%")
+            else:
+                cells.append(f"{e['mean'] * 100:.1f}%")
         lines.append(f"| {g} | {n} | " + " | ".join(cells) + " |")
     lines.append("")
     for name in names:
-        o = report["endpoints"][name]["summary"]["_overall"]
-        lines.append(f"- **{name}**: {o['errors']} errors, median latency {o['median_latency_s']}s")
+        ep = report["endpoints"][name]
+        o = ep["summary"]["_overall"]
+        lines.append(f"- **{name}** (`{ep['model']}`): {o['errors']} errors, median latency {o['median_latency_s']}s")
     return "\n".join(lines) + "\n"
 
 
@@ -180,9 +279,11 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", help="JSONL benchmark file")
     ap.add_argument("--flores", help="Comma-separated target languages to pull from FLORES+ (e.g. yo,ha,ig)")
-    ap.add_argument("--limit", type=int, default=100, help="Items per FLORES language")
+    ap.add_argument("--fleurs", help="Comma-separated languages for FLEURS speech recognition (yo,ha,ig)")
+    ap.add_argument("--limit", type=int, default=100, help="Items per FLORES/FLEURS language")
     ap.add_argument("--endpoint", action="append", required=True,
-                    help="name=URL of an AtlasKit gateway; repeat to compare models")
+                    help="name=URL[#model] of an AtlasKit gateway; repeat to compare models")
+    ap.add_argument("--workers", type=int, default=4, help="Concurrent requests per endpoint")
     ap.add_argument("--api-key")
     ap.add_argument("--out", default="eval/reports")
     args = ap.parse_args(argv)
@@ -192,22 +293,35 @@ def main(argv: list[str] | None = None) -> int:
         items += load_jsonl(args.data)
     if args.flores:
         items += load_flores([l.strip() for l in args.flores.split(",")], args.limit)
+    if args.fleurs:
+        items += load_fleurs([l.strip() for l in args.fleurs.split(",")], args.limit)
     if not items:
-        ap.error("provide --data and/or --flores")
+        ap.error("provide --data, --flores and/or --fleurs")
 
-    report = {"dataset": args.data or f"flores_plus:{args.flores}", "n_items": len(items),
+    sources = [s for s in (args.data, args.flores and f"flores_plus:{args.flores}",
+                           args.fleurs and f"fleurs:{args.fleurs}") if s]
+    report = {"dataset": " + ".join(sources), "n_items": len(items),
               "started": time.strftime("%Y-%m-%d %H:%M:%S"), "endpoints": {}}
     for spec in args.endpoint:
         name, _, url = spec.partition("=")
         if not url:
             name, url = "default", name
+        url, _, model = url.partition("#")
         client = AtlasKit(url, api_key=args.api_key)
-        results = []
-        for i, item in enumerate(items, 1):
-            results.append(run_item(client, item))
-            print(f"\r[{name}] {i}/{len(items)}", end="", file=sys.stderr, flush=True)
+        done = 0
+
+        def run(item: dict, client=client, model=model or None, name=name) -> dict:
+            nonlocal done
+            res = run_item(client, item, model)
+            done += 1
+            print(f"\r[{name}] {done}/{len(items)}", end="", file=sys.stderr, flush=True)
+            return res
+
+        with ThreadPoolExecutor(max(1, args.workers)) as pool:
+            results = list(pool.map(run, items))
         print(file=sys.stderr)
-        report["endpoints"][name] = {"url": url, "summary": summarise(items, results), "results": results}
+        report["endpoints"][name] = {"url": url, "model": model or "n-atlas",
+                                     "summary": summarise(items, results), "results": results}
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)

@@ -166,13 +166,13 @@ export class AtlasKit {
   }
 
   /** @returns {Promise<string>} */
-  async translate(text, target, source) {
-    return (await this._json("POST", "/v1/atlas/translate", { text, target, source })).translation;
+  async translate(text, target, source, { model } = {}) {
+    return (await this._json("POST", "/v1/atlas/translate", { text, target, source, model })).translation;
   }
 
   /** @returns {Promise<string>} */
-  async summarize(text, { language, maxWords = 80 } = {}) {
-    return (await this._json("POST", "/v1/atlas/summarize", { text, language, max_words: maxWords })).summary;
+  async summarize(text, { language, maxWords = 80, model } = {}) {
+    return (await this._json("POST", "/v1/atlas/summarize", { text, language, max_words: maxWords, model })).summary;
   }
 
   detectLanguage(text) { return this._json("POST", "/v1/atlas/detect-language", { text }); }

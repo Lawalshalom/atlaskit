@@ -62,3 +62,6 @@ Logs are in:
 | vLLM out of memory | `GPU_UTIL=0.75 MAX_LEN=4096 bash deploy/runpod/start.sh`, or use a larger GPU |
 | ASR returns "Could not decode audio" | `apt-get install -y ffmpeg` (setup.sh does this) |
 | `/health` returns `degraded` | vLLM is still loading; check `tail -f /workspace/vllm.log` |
+| `403` with body `error code: 1010` | RunPod's Cloudflare proxy blocks Python's default `Python-urllib` user agent. The AtlasKit SDKs, the OpenAI SDK, `requests`, curl and browsers are unaffected. In raw `urllib` code, set a `User-Agent` header |
+| Added tester keys or updated code | `GATEWAY_ONLY=1 bash deploy/runpod/start.sh` restarts only the gateway in a few seconds; N-ATLaS stays loaded |
+| Two pods share one network volume | Give each its own logs with `ATLAS_LOG_DIR=/root/logs bash deploy/runpod/start.sh`, so usage stats are not mixed |

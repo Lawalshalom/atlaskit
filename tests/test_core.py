@@ -68,6 +68,17 @@ def test_openai_content_parts_and_streaming_flags():
     assert b["stream_options"] == {"include_usage": True}
 
 
+def test_fine_tuned_adapters_are_the_only_other_models_allowed():
+    msgs = [{"role": "user", "content": "x"}]
+    plan = build_chat_request({"model": "natlas-mt", "messages": msgs}, adapters=("natlas-mt",))
+    assert plan.upstream_body["model"] == "natlas-mt" and plan.requested_model == "natlas-mt"
+    assert build_chat_request({"model": "n-atlas", "messages": msgs}, adapters=("natlas-mt",)).upstream_body["model"] == "NCAIR1/N-ATLaS"
+    with pytest.raises(AtlasError) as e:
+        build_chat_request({"model": "natlas-mt", "messages": msgs})
+    assert e.value.status == 404
+    assert Settings.from_env({"ATLAS_ADAPTERS": "natlas-mt, b"}).adapters == ("natlas-mt", "b")
+
+
 def test_clean_completion_strips_special_tokens():
     assert clean_completion("assistant\nBawo ni<|eot_id|>") == "Bawo ni"
 

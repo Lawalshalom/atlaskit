@@ -1,5 +1,7 @@
 # AtlasKit: developer infrastructure for N-ATLaS
 
+[![tests](https://github.com/Lawalshalom/atlaskit/actions/workflows/tests.yml/badge.svg)](https://github.com/Lawalshalom/atlaskit/actions/workflows/tests.yml)
+
 AtlasKit makes [N-ATLaS](https://huggingface.co/NCAIR1/N-ATLaS), Nigeria's open-source multilingual LLM, easy to build on. With it, a developer can go from "the weights are on Hugging Face" to "my app talks to N-ATLaS in Yoruba, Hausa, Igbo and Nigerian English" in minutes.
 
 Built by **Halo Media and Digital Limited (Halo Digital)** for the National AI Innovation Challenge 2026, Problem Statement 01 (Developer Infrastructure).
@@ -10,7 +12,8 @@ Built by **Halo Media and Digital Limited (Halo Digital)** for the National AI I
 | **Python SDK** (`sdk/python/`) | Zero-dependency client: `chat`, `stream`, `Conversation`, `transcribe`, `voice_chat`, `translate`, `summarize`, `detect_language`, plus an `atlaskit` CLI. |
 | **JavaScript SDK** (`sdk/js/`) | Zero-dependency ESM client for Node 18+, Deno, Bun and browsers, with the same API. |
 | **Playground** (`playground/`) | Browser UI served at `/`. It covers streaming chat, side-by-side comparison of all four languages, translation, speech (upload or record), copy-paste code generation and usage stats. |
-| **Evaluation harness** (`eval/`) | Benchmarks one or more N-ATLaS deployments (for example base vs fine-tuned) on FLORES+ translation (chrF), language ID and QA. It writes JSON and Markdown reports. |
+| **Fine-tuning kit** (`finetune/`) | LoRA fine-tuning of N-ATLaS from OpenAI-format JSONL, rendered with N-ATLaS's own chat template. The adapter is served next to the base model and selected by name (`model="natlas-mt"`). |
+| **Evaluation harness** (`eval/`) | Benchmarks one or more N-ATLaS deployments or adapters (for example base vs fine-tuned) on FLORES+ translation (chrF), FLEURS speech recognition (WER/CER), language ID and QA. It writes JSON and Markdown reports. |
 | **RunPod deployment** (`deploy/runpod/`) | Two scripts take a GPU pod to a public HTTPS endpoint. |
 
 ## Why
@@ -94,7 +97,7 @@ client.chat.completions.create(model="n-atlas", messages=[{"role": "user", "cont
 | POST | `/v1/chat/completions` | OpenAI-compatible, including streaming (SSE). Extension: `atlas_language` (`en`/`yo`/`ha`/`ig`) pins the reply language |
 | POST | `/v1/audio/transcriptions` | multipart `file` + `language`; routed to `NCAIR1/{Yoruba,Hausa,Igbo}-ASR` / `NigerianAccentedEnglish` |
 | POST | `/v1/atlas/voice-chat` | multipart audio → transcript + N-ATLaS reply in the same language |
-| POST | `/v1/atlas/translate` | `{text, target, source?}` |
+| POST | `/v1/atlas/translate` | `{text, target, source?, model?}`. `model` picks a fine-tuned adapter |
 | POST | `/v1/atlas/summarize` | `{text, language?, max_words?}` |
 | POST | `/v1/atlas/detect-language` | `{text}` → `{language, confidence}` (fast heuristic; accuracy is measured in `eval/`) |
 | POST | `/v1/atlas/feedback` | `{rating: 1 or -1, language?, tag?}`: thumbs up/down from apps or the playground |
@@ -106,7 +109,7 @@ Authentication: `Authorization: Bearer <key>` (or `X-API-Key`). Keys come from `
 
 ```bash
 python examples/dev_server.py        # gateway + playground against a mock model, no GPU needed
-pytest tests                         # 21 tests: core logic, gateway end to end, Python SDK, JS SDK, eval harness
+pytest tests                         # 27 tests: core logic, gateway end to end, Python SDK, JS SDK, eval harness, fine-tuning data
 ```
 
 ## Docs
@@ -114,6 +117,8 @@ pytest tests                         # 21 tests: core logic, gateway end to end,
 - [Architecture](docs/ARCHITECTURE.md)
 - [N-ATLaS integration evidence](docs/NATLAS_INTEGRATION.md)
 - [Deploying on RunPod](docs/DEPLOY_RUNPOD.md)
+- [Fine-tuning N-ATLaS with LoRA](finetune/README.md)
+- [Evaluation harness](eval/README.md)
 - [Beta testing guide](docs/BETA_TESTING.md)
 
 ## Licensing

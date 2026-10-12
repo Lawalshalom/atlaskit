@@ -23,7 +23,7 @@ The gateway reproduces the usage that NCAIR documents for N-ATLaS:
 
 ## Guard against substitution
 
-`build_chat_request()` rejects any `model` value that is not N-ATLaS (HTTP 404, `model_not_found`). This is covered by `tests/test_core.py::test_rejects_other_models_and_bad_input` and `tests/test_integration.py::test_other_model_rejected`.
+`build_chat_request()` rejects any `model` value that is not N-ATLaS (HTTP 404, `model_not_found`). The only other names it accepts are LoRA adapters trained on N-ATLaS with the fine-tuning kit and listed in `ATLAS_ADAPTERS`. vLLM applies them on top of the N-ATLaS weights it has loaded, so they cannot carry a different base model. This is covered by `tests/test_core.py::test_rejects_other_models_and_bad_input` and `tests/test_integration.py::test_other_model_rejected`.
 
 ## How to verify on a live deployment
 

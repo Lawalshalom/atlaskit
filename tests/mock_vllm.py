@@ -10,6 +10,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 LAST_REQUEST: dict = {}
+ADAPTERS = {"natlas-mt"}  # LoRA adapters this fake vLLM pretends to serve (--lora-modules)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -35,7 +36,7 @@ class Handler(BaseHTTPRequestHandler):
         body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
         LAST_REQUEST.clear()
         LAST_REQUEST.update(body)
-        if body.get("model") != "NCAIR1/N-ATLaS":
+        if body.get("model") != "NCAIR1/N-ATLaS" and body.get("model") not in ADAPTERS:
             return self._send(404, {"error": {"message": "model not found"}})
         last_user = [m for m in body["messages"] if m["role"] == "user"][-1]["content"]
         reply = f"echo: {last_user}"
