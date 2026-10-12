@@ -1,0 +1,46 @@
+name: playground-pages
+
+# Publishes the playground to GitHub Pages at a stable address. The page calls the API named
+# in playground/hosted-api-url.txt, so moving the backend only means editing that one line.
+on:
+  push:
+    branches: [main]
+    paths: ["playground/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the hosted playground
+        run: |
+          api="$(tr -d '[:space:]' < playground/hosted-api-url.txt)"
+          case "$api" in https://*) ;; *) echo "hosted-api-url.txt must hold an https:// URL"; exit 1 ;; esac
+          mkdir -p site
+          python3 - "$api" <<'PY'
+          import sys
+          api = sys.argv[1]
+          html = open("playground/index.html", encoding="utf-8").read()
+          html = html.replace("<head>", f'<head>\n<meta name="atlaskit-api" content="{api}">', 1)
+          open("site/index.html", "w", encoding="utf-8").write(html)
+          PY
+          touch site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4

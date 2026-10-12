@@ -528,7 +528,9 @@ langOptions($("trFrom"), true, "en");
 langOptions($("trTo"), false, "yo");
 
 // ---------------------------------------------------------------- connection
-$("baseUrl").value = store.get("atlas.url", location.origin.startsWith("http") ? location.origin : "http://localhost:8080");
+// A copy hosted away from the gateway (the GitHub Pages playground) names its API in <meta name="atlaskit-api">.
+const HOSTED_API = document.querySelector('meta[name="atlaskit-api"]')?.content.trim();
+$("baseUrl").value = HOSTED_API || store.get("atlas.url", location.origin.startsWith("http") ? location.origin : "http://localhost:8080");
 $("apiKey").value = store.get("atlas.key", "");
 const base = () => $("baseUrl").value.trim().replace(/\/+$/, "");
 const headers = (json = true) => {
