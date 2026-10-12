@@ -379,7 +379,7 @@ footer a{color:inherit}
     </section>
 
     <section id="translate" class="view" aria-labelledby="translate-h">
-      <div class="view-head"><div><h1 id="translate-h">Translate</h1><p class="lede">Translate between English, Yorùbá, Hausa and Igbo. Compare base N-ATLaS with a fine-tuned adapter side by side.</p></div></div>
+      <div class="view-head"><div><h1 id="translate-h">Translate</h1><p class="lede">Translate between English, Yorùbá, Hausa and Igbo. For English → Yorùbá, Hausa and Igbo, compare base N-ATLaS with a fine-tuned adapter side by side.</p></div></div>
       <div class="tr-bar">
         <select id="trFrom" aria-label="From"></select>
         <button class="icon-btn" id="swap" aria-label="Swap languages" title="Swap languages"><svg class="i" aria-hidden="true"><use href="#i-swap"/></svg></button>
@@ -712,18 +712,33 @@ function trResult(label, text) {
   d.innerHTML = `<div class="tr-label">${escapeHtml(label)}</div><div class="tr-text"></div>`;
   d.querySelector(".tr-text").textContent = text; return d;
 }
+// The fine-tuning kit's adapter (finetune/prepare_flores.py) only learns English → Yorùbá, Hausa and Igbo.
+const TUNED_DIRECTIONS = new Set(["en>yo", "en>ha", "en>ig"]);
 $("trGo").onclick = async () => {
   const text = $("trIn").value.trim(); if (!text) return;
   $("trErr").textContent = ""; $("trGo").disabled = true;
   const choice = $("trModel").value || "n-atlas";
   const tuned = chatModels.find((m) => m.id !== "n-atlas");
-  const runs = choice === "__both__" ? [chatModels[0], tuned] : [chatModels.find((m) => m.id === choice) || chatModels[0]];
-  $("trOut").innerHTML = runs.map(() => `<div class="skeleton"><i></i><i></i><i></i></div>`).join("");
+  const to = $("trTo").value;
+  $("trOut").innerHTML = `<div class="skeleton"><i></i><i></i><i></i></div>`;
   try {
+    let from = $("trFrom").value;
+    if (!from && choice !== "n-atlas") from = (await api("/v1/atlas/detect-language", { text }).catch(() => ({}))).language;
+    const fits = TUNED_DIRECTIONS.has(`${from}>${to}`);
+    const runs = choice === "__both__" ? (fits ? [chatModels[0], tuned] : [chatModels[0]])
+                                       : [chatModels.find((m) => m.id === choice) || chatModels[0]];
+    $("trOut").innerHTML = runs.map(() => `<div class="skeleton"><i></i><i></i><i></i></div>`).join("");
     const results = await Promise.all(runs.map((m) => api("/v1/atlas/translate",
-      { text, target: $("trTo").value, source: $("trFrom").value || null, ...(m.id !== "n-atlas" ? { model: m.id } : {}) })));
+      { text, target: to, source: $("trFrom").value || null, ...(m.id !== "n-atlas" ? { model: m.id } : {}) })));
     $("trOut").innerHTML = "";
-    results.forEach((r, i) => $("trOut").appendChild(trResult(runs.length > 1 ? runs[i].label : LANGS[$("trTo").value].native, r.translation)));
+    results.forEach((r, i) => $("trOut").appendChild(trResult(runs.length > 1 ? runs[i].label : LANGS[to].native, r.translation)));
+    if (tuned && choice !== "n-atlas" && !fits) {
+      const note = document.createElement("p"); note.className = "hint";
+      note.textContent = `The fine-tuned model is trained for English → Yorùbá, Hausa and Igbo, so ` +
+        (choice === "__both__" ? "only base N-ATLaS is shown" : "expect weaker results") +
+        ` for ${LANGS[from]?.native ?? "this source"} → ${LANGS[to].native}.`;
+      $("trOut").appendChild(note);
+    }
   } catch (e) { $("trOut").innerHTML = `<p class="placeholder">The translation appears here.</p>`; $("trErr").textContent = e.message; }
   $("trGo").disabled = false;
 };
