@@ -1,204 +1,657 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AtlasKit Playground</title>
+<meta name="description" content="Try N-ATLaS, Nigeria's open multilingual model, in Yoruba, Hausa, Igbo and Nigerian English.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23008751'/%3E%3Ccircle cx='16' cy='16' r='8.5' fill='none' stroke='white' stroke-width='2'/%3E%3Cellipse cx='16' cy='16' rx='3.6' ry='8.5' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M7.5 16h17' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Noto Sans renders Yoruba tone marks with under-dots and Hausa hooked letters (ɓ ɗ ƙ ƴ) correctly. -->
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500&family=Noto+Sans:wght@400;500;600&family=Noto+Serif:wght@500&display=swap" rel="stylesheet">
+<script>
+  // Light by default; ?theme=dark or the saved choice switches before first paint.
+  (() => { let t = null; try { t = new URLSearchParams(location.search).get("theme") || localStorage.getItem("atlas.theme"); } catch {}
+    document.documentElement.dataset.theme = t === "dark" ? "dark" : "light"; })();
+</script>
 <style>
-:root{--bg:#f7f6f2;--panel:#fff;--ink:#1b1d1c;--muted:#6a6f6c;--line:#e3e1da;--accent:#0b7a4b;--accent-ink:#fff;--soft:#e8f3ed;--warn:#a23b1e;--code:#f1efe8}
-@media (prefers-color-scheme:dark){:root{--bg:#141615;--panel:#1d201f;--ink:#ecebe6;--muted:#9aa09c;--line:#2f3331;--accent:#3ec486;--accent-ink:#0b1410;--soft:#1f2e27;--warn:#f08a6c;--code:#262a28}}
+:root{
+  --font-display:"Fraunces",Georgia,"Times New Roman",serif;
+  --font-display-ng:"Noto Serif",Georgia,serif; /* display text in Nigerian languages: Fraunces misplaces tone marks on ẹ/ọ */
+  --font-body:"Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --radius:16px;--radius-sm:10px;--ease:cubic-bezier(.2,.7,.2,1);
+}
+:root,[data-theme=light]{
+  color-scheme:light;
+  --bg:#f5f2ea;--surface:#fffdf8;--surface-2:#f1ede3;--ink:#16201b;--ink-2:#3a4640;--muted:#5f6a64;
+  --line:#e3ded1;--line-strong:#cfc8b7;
+  --accent:#008751;--accent-hover:#006c41;--accent-ink:#fff;--accent-soft:#e3f1e9;--accent-line:#b8dbc7;
+  --danger:#b3361c;--danger-soft:#fbeae4;--warn:#9a6a00;
+  --code-bg:#17201c;--code-ink:#e3ece7;--code-muted:#8fa39a;
+  --shadow:0 1px 2px rgba(22,32,27,.05),0 10px 30px -18px rgba(22,32,27,.25);
+}
+[data-theme=dark]{
+  color-scheme:dark;
+  --bg:#0d1210;--surface:#141a17;--surface-2:#1a221e;--ink:#e7ece9;--ink-2:#c2cbc6;--muted:#8f9b95;
+  --line:#242e29;--line-strong:#34413a;
+  --accent:#3cc58a;--accent-hover:#62d6a3;--accent-ink:#04140c;--accent-soft:#132c22;--accent-line:#22503d;
+  --danger:#f0896d;--danger-soft:#34190f;--warn:#e2b04a;
+  --code-bg:#080c0a;--code-ink:#d9e4de;--code-muted:#7f9188;
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 14px 36px -20px rgba(0,0,0,.7);
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
-h1{font-size:18px;margin:0}h1 span{color:var(--accent)}
-.sub{color:var(--muted);font-size:13px}
-.conn{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-input,select,textarea,button{font:inherit;color:inherit}
-input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
-textarea{width:100%;resize:vertical;min-height:90px}
-button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
-button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500}
-button:disabled{opacity:.5;cursor:default}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
-.dot.ok{background:var(--accent)}.dot.bad{background:var(--warn)}
-nav{display:flex;gap:4px;padding:10px 20px;overflow-x:auto}
-nav button{background:transparent;color:var(--muted);font-weight:500}
-nav button.on{background:var(--soft);color:var(--ink)}
-main{max-width:1100px;margin:0 auto;padding:8px 20px 40px}
-section{display:none}section.on{display:block}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
-.row label{font-size:13px;color:var(--muted)}
-.chat{display:flex;flex-direction:column;gap:10px;min-height:200px;max-height:55vh;overflow:auto;padding-right:4px}
-.msg{padding:10px 12px;border-radius:10px;white-space:pre-wrap;max-width:85%}
-.msg.user{align-self:flex-end;background:var(--soft)}
-.msg.assistant{align-self:flex-start;background:var(--bg);border:1px solid var(--line)}
-.msg .meta{display:flex;gap:6px;margin-top:6px;font-size:12px;color:var(--muted);align-items:center}
-.msg .meta button{padding:2px 8px;font-size:12px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
-.out{white-space:pre-wrap;min-height:60px}
-.lang{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
-pre{background:var(--code);border-radius:8px;padding:12px;overflow:auto;font-size:13px;margin:0}
-.err{color:var(--warn);font-size:14px;margin-top:6px;min-height:1em}
-.stat{font-size:28px;font-weight:700}.stat small{display:block;font-size:12px;color:var(--muted);font-weight:500}
-.foot{color:var(--muted);font-size:12px;text-align:center;padding:20px}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 var(--font-body);-webkit-font-smoothing:antialiased;
+  transition:background-color .35s var(--ease),color .35s var(--ease)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.skip{position:absolute;left:-999px;top:8px;background:var(--surface);padding:8px 12px;border-radius:8px;z-index:20}
+.skip:focus{left:12px}
+svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.muted{color:var(--muted)}
+
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:16px;padding:12px 22px;
+  background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);margin-right:auto}
+.brand .mark{width:30px;height:30px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink)}
+.brand .mark svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9}
+.wordmark{font-family:var(--font-display);font-weight:600;font-size:21px;letter-spacing:-.01em}
+.tag{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line-strong);border-radius:99px;padding:2px 9px}
+.conn-pill{display:flex;align-items:center;gap:8px;white-space:nowrap;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:6px 12px 6px 10px;cursor:pointer;font-size:13px;color:var(--ink-2)}
+.conn-pill:hover{border-color:var(--line-strong)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.ok{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.dot.bad{background:var(--danger);box-shadow:0 0 0 3px var(--danger-soft)}
+.dot.wait{background:var(--warn)}
+.icon-btn{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);cursor:pointer;text-decoration:none}
+.icon-btn:hover{color:var(--ink);border-color:var(--line-strong)}
+[data-theme=light] .i-sun,[data-theme=dark] .i-moon{display:none}
+.conn-panel{position:absolute;right:22px;top:calc(100% + 8px);width:min(420px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;display:grid;gap:12px;animation:pop .18s var(--ease)}
+.conn-panel h2{font:600 17px var(--font-display);margin:0}
+
+/* ---------- shell ---------- */
+.shell{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:calc(100vh - 61px)}
+.sidebar{position:sticky;top:61px;align-self:start;height:calc(100vh - 61px);padding:22px 14px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--line)}
+.sidebar a{display:flex;align-items:center;gap:11px;white-space:nowrap;padding:9px 12px;border-radius:10px;color:var(--ink-2);text-decoration:none;font-weight:500;font-size:14.5px;transition:background-color .15s,color .15s}
+.sidebar a:hover{background:var(--surface-2);color:var(--ink)}
+.sidebar a[aria-current=page]{background:var(--accent-soft);color:var(--ink)}
+.sidebar a[aria-current=page] svg{color:var(--accent)}
+.side-foot{margin-top:auto;font-size:12px;color:var(--muted);padding:12px;line-height:1.5}
+.side-foot strong{display:block;color:var(--ink-2);font-weight:600}
+main{padding:30px clamp(18px,4vw,48px) 60px;max-width:1180px;width:100%}
+.view{display:none;scroll-margin-top:120px}
+.view.on{display:block;animation:rise .35s var(--ease)}
+.view-head{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+.view-head h1{font:600 clamp(26px,3vw,34px)/1.15 var(--font-display);letter-spacing:-.015em;margin:0}
+.lede{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.head-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* ---------- controls ---------- */
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:9px 16px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid transparent;transition:background-color .15s,border-color .15s,transform .1s}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.ghost{background:var(--surface);border-color:var(--line);color:var(--ink-2)}
+.btn.ghost:hover{border-color:var(--line-strong);color:var(--ink)}
+.btn.sm{padding:6px 11px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default;transform:none}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea{width:100%;resize:vertical}
+label{font-size:13px;color:var(--muted);font-weight:500}
+.stack{display:grid;gap:6px}
+.field-inline{display:flex;align-items:center;gap:8px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 14px;font-size:13.5px;font-weight:500;color:var(--ink-2);cursor:pointer;transition:all .15s}
+.seg button:hover{border-color:var(--line-strong);color:var(--ink)}
+.seg button[aria-checked=true]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.err{color:var(--danger);font-size:14px;min-height:0}
+.err:not(:empty){margin:10px 0;padding:10px 14px;background:var(--danger-soft);border-radius:10px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+/* ---------- key banner ---------- */
+.keybar{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 16px;margin-bottom:24px;border:1px solid var(--accent-line);background:var(--accent-soft);border-radius:var(--radius)}
+.keybar strong{font-family:var(--font-display);font-size:17px;font-weight:600}
+.keybar p{margin:0;color:var(--ink-2);font-size:14px;flex:1 1 260px}
+.keybar input{flex:1 1 220px}
+
+/* ---------- chat ---------- */
+.langs{margin-bottom:14px}
+.chat-panel{display:flex;flex-direction:column;height:min(70vh,760px);min-height:440px;overflow:hidden}
+.log{flex:1;overflow-y:auto;padding:24px 24px 8px;display:flex;flex-direction:column;gap:18px;scroll-behavior:smooth}
+.empty{margin:auto 0;text-align:center;padding:10px}
+.greet{font:500 clamp(22px,2.6vw,28px)/1.3 var(--font-display-ng);margin:0 0 4px;color:var(--ink)}
+.greet span{color:var(--accent)}
+.empty .muted{margin:0 0 22px}
+.suggestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;text-align:left;max-width:760px;margin:0 auto}
+.suggestion{display:grid;gap:4px;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--bg);cursor:pointer;text-align:left;transition:border-color .15s,transform .15s,background-color .15s}
+.suggestion:hover{border-color:var(--accent-line);background:var(--accent-soft);transform:translateY(-2px)}
+.s-lang{font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
+.s-text{font-size:14.5px;color:var(--ink)}
+.msg{display:flex;gap:12px;max-width:100%;animation:rise .3s var(--ease)}
+.msg.user{justify-content:flex-end}
+.msg.user .bubble{background:var(--ink);color:var(--bg);border-radius:16px 16px 4px 16px;padding:10px 15px;max-width:75%;white-space:pre-wrap}
+.avatar{width:30px;height:30px;border-radius:9px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:none;font:600 14px var(--font-display);margin-top:2px}
+.msg.assistant .body{min-width:0;max-width:min(78ch,85%)}
+.md{overflow-wrap:anywhere}
+.md p{margin:0 0 .6em}.md p:last-child{margin-bottom:0}
+.md ul,.md ol{margin:.2em 0 .7em;padding-left:1.3em}.md li{margin:.15em 0}
+.md .h{font-weight:600}
+.md code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-2);padding:1px 5px;border-radius:5px}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:8px;font-size:12.5px;color:var(--muted)}
+.meta .chip{font-weight:600;color:var(--ink-2)}
+.meta .acts{display:inline-flex;gap:2px;margin-left:auto}
+.meta button{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:var(--muted);cursor:pointer}
+.meta button:hover{background:var(--surface-2);color:var(--ink)}
+.meta button.picked{color:var(--accent);background:var(--accent-soft)}
+.meta svg.i{width:15px;height:15px}
+.typing{display:inline-flex;gap:4px;padding:8px 0}
+.typing i{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:blink 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+.composer{border-top:1px solid var(--line);padding:14px 16px 12px;background:var(--surface)}
+.composer textarea{border:0;background:transparent;padding:6px 4px;min-height:52px;max-height:220px;resize:none;box-shadow:none}
+.composer textarea:focus{box-shadow:none}
+.composer-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.composer-row .spacer{flex:1}
+.hint{font-size:12px;color:var(--muted)}
+details.settings summary{list-style:none;display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--ink-2);padding:6px 10px;border-radius:9px}
+details.settings summary::-webkit-details-marker{display:none}
+details.settings summary:hover{background:var(--surface-2)}
+details.settings[open] summary{background:var(--surface-2);color:var(--ink)}
+.settings-grid{display:grid;grid-template-columns:minmax(0,1fr) 110px 110px;gap:12px;padding:12px 4px 4px}
+
+/* ---------- compare ---------- */
+.prompt-card{padding:16px}
+.prompt-card textarea{min-height:84px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.row .spacer{flex:1}
+.cmp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:18px}
+.col{padding:18px;display:flex;flex-direction:column;gap:10px;animation:rise .35s var(--ease) both}
+.col header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.col h3{margin:0;font:500 19px var(--font-display-ng)}
+.col .hello{font-size:13px;color:var(--muted)}
+.col .md{flex:1}
+.skeleton{display:grid;gap:8px}
+.skeleton i{height:11px;border-radius:6px;background:linear-gradient(90deg,var(--surface-2),var(--line),var(--surface-2));background-size:200% 100%;animation:shimmer 1.2s infinite}
+.skeleton i:nth-child(2){width:88%}.skeleton i:nth-child(3){width:64%}
+
+/* ---------- translate ---------- */
+.tr-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
+.tr-bar select{min-width:160px}
+.tr-panes{display:grid;grid-template-columns:1fr 1fr;overflow:hidden}
+.pane{padding:18px;display:flex;flex-direction:column;gap:12px;min-height:260px}
+.pane + .pane{border-left:1px solid var(--line);background:var(--surface-2)}
+.pane textarea{flex:1;border:0;background:transparent;padding:0;font-size:17px;min-height:170px;box-shadow:none}
+.pane-foot{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.pane-foot .spacer{flex:1}
+.tr-result{display:grid;gap:6px;animation:rise .3s var(--ease)}
+.tr-result + .tr-result{border-top:1px dashed var(--line-strong);padding-top:14px}
+.tr-label{font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
+.tr-text{font-size:17px;white-space:pre-wrap}
+.placeholder{color:var(--muted);font-size:15px}
+
+/* ---------- speech ---------- */
+.speech{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);overflow:hidden}
+.speech-in{padding:24px;display:flex;flex-direction:column;gap:18px;align-items:center;text-align:center;border-right:1px solid var(--line)}
+.rec{position:relative;width:112px;height:112px;border-radius:50%;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer;display:grid;place-items:center;transition:transform .15s,background-color .2s}
+.rec:hover{transform:scale(1.03)}
+.rec svg{width:38px;height:38px;fill:none;stroke:currentColor;stroke-width:1.8}
+.rec.on{background:var(--danger)}
+.rec.on::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:2px solid var(--danger);animation:ring 1.4s var(--ease) infinite}
+.rec-state{font-size:14px;color:var(--ink-2);min-height:1.5em}
+.drop{width:100%;border:1.5px dashed var(--line-strong);border-radius:12px;padding:14px;font-size:13.5px;color:var(--muted);cursor:pointer;transition:border-color .15s,background-color .15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--ink-2)}
+audio{width:100%}
+.speech-out{padding:24px;display:grid;gap:18px;align-content:start}
+.result-label{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.result-label span{text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted)}
+.result-text{font-size:16.5px;min-height:1.6em}
+
+/* ---------- code ---------- */
+.code-card{overflow:hidden}
+.code-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.code-top .spacer{flex:1}
+.install{font:13px var(--font-mono);color:var(--muted);padding:10px 16px;border-bottom:1px solid var(--line);background:var(--surface-2);overflow-x:auto;white-space:nowrap}
+pre{margin:0;padding:20px;background:var(--code-bg);color:var(--code-ink);font:13.5px/1.65 var(--font-mono);overflow:auto;max-height:60vh}
+
+/* ---------- usage ---------- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px}
+.tile{padding:18px 20px}
+.tile .v{font:600 34px/1.1 var(--font-display);letter-spacing:-.02em}
+.tile .k{font-size:13px;color:var(--muted);margin-top:4px}
+.bars-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+figure.bars{margin:0;padding:18px 20px}
+figure.bars figcaption{font:600 17px var(--font-display);margin-bottom:14px}
+.bar-row{display:grid;grid-template-columns:120px 1fr 48px;align-items:center;gap:10px;font-size:13.5px;margin-bottom:2px;padding:5px 0}
+.bar-row .name{color:var(--ink-2)}
+.bar-row .track{display:block;height:12px;border-radius:0 4px 4px 0;background:var(--surface-2)}
+.bar-row .fill{display:block;height:12px;border-radius:0 4px 4px 0;background:var(--accent);min-width:2px;transition:width .6s var(--ease)}
+.bar-row .num{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums}
+
+footer{margin-top:48px;padding-top:20px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);max-width:90ch}
+footer a{color:inherit}
+
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+@keyframes shimmer{to{background-position:-200% 0}}
+@keyframes ring{from{transform:scale(.92);opacity:.9}to{transform:scale(1.25);opacity:0}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+@media (max-width:520px){
+  .gh{display:none}
+  .wordmark{font-size:19px}
+  .conn-pill{padding:6px 10px;font-size:12.5px}
+}
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr}
+  .sidebar{position:sticky;top:61px;z-index:5;height:auto;flex-direction:row;overflow-x:auto;padding:8px 12px;border-right:0;border-bottom:1px solid var(--line);background:var(--bg)}
+  .sidebar a{flex:none;padding:7px 12px}
+  .side-foot{display:none}
+  main{padding-top:22px}
+  .tr-panes,.speech,.suggestions{grid-template-columns:1fr}
+  .pane + .pane{border-left:0;border-top:1px solid var(--line)}
+  .speech-in{border-right:0;border-bottom:1px solid var(--line)}
+  .settings-grid{grid-template-columns:1fr 1fr}
+  .settings-grid .wide{grid-column:1/-1}
+  .tag,.hint{display:none}
+  .topbar{gap:8px;padding:10px 14px}
+  .msg.user .bubble{max-width:88%}.msg.assistant .body{max-width:100%}
+}
 </style>
 </head>
 <body>
-<header>
-  <div>
-    <h1>Atlas<span>Kit</span> Playground</h1>
-    <div class="sub">Try N-ATLaS in Yoruba, Hausa, Igbo and Nigerian English</div>
-  </div>
-  <div class="conn">
-    <span class="dot" id="dot"></span><span class="sub" id="status">checking…</span>
-    <input id="baseUrl" placeholder="Gateway URL" size="28" aria-label="Gateway URL">
-    <input id="apiKey" type="password" placeholder="API key" size="14" aria-label="API key">
-    <button class="ghost" id="connect">Connect</button>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-11.7 7.1L4 20l1.1-4A8 8 0 1 1 20 12Z"/></symbol>
+  <symbol id="i-compare" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="7" height="15" rx="2"/><rect x="13.5" y="4.5" width="7" height="15" rx="2"/></symbol>
+  <symbol id="i-translate" viewBox="0 0 24 24"><path d="M4 6h9M8.5 4v2M11 6c-.8 3.6-3.3 6.3-6.5 7.6M7 9.5c1 1.8 2.7 3.2 4.6 3.9M13 20l3.8-8.5L20.5 20M14.4 17h4.8"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></symbol>
+  <symbol id="i-usage" viewBox="0 0 24 24"><path d="M5 20v-8M12 20V5M19 20v-5M3 20h18"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6 6 6M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6Z"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M7.5 10.5V20H4.5v-9.5h3Zm0 0 3.8-6.3a1.8 1.8 0 0 1 3.3 1.3l-.8 3.5h4.6a2 2 0 0 1 2 2.4l-1.3 6.5a2 2 0 0 1-2 1.6H7.5"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M16.5 13.5V4h3v9.5h-3Zm0 0-3.8 6.3a1.8 1.8 0 0 1-3.3-1.3l.8-3.5H5.6a2 2 0 0 1-2-2.4l1.3-6.5a2 2 0 0 1 2-1.6h9.6"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h14l-3.5-3.5M20 16H6l3.5 3.5"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4"/></symbol>
+</svg>
+<a class="skip" href="#workspace">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="#chat" aria-label="AtlasKit Playground home">
+    <span class="mark"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><ellipse cx="12" cy="12" rx="3.4" ry="8"/><path d="M4 12h16"/></svg></span>
+    <span class="wordmark">AtlasKit</span><span class="tag">Playground</span>
+  </a>
+  <button class="conn-pill" id="connToggle" aria-expanded="false" aria-controls="connPanel"><span class="dot wait" id="dot"></span><span id="status">Checking…</span></button>
+  <a class="icon-btn gh" href="https://github.com/Lawalshalom/atlaskit" target="_blank" rel="noopener" aria-label="AtlasKit on GitHub" title="AtlasKit on GitHub">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 2.9.8.1-.7.4-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.6 5 .4.3.7.9.7 1.9V21c0 .3.2.6.7.5A10 10 0 0 0 12 2Z"/></svg>
+  </a>
+  <button class="icon-btn" id="themeToggle" aria-label="Switch to dark mode" title="Switch theme">
+    <svg class="i i-moon" aria-hidden="true"><use href="#i-moon"/></svg><svg class="i i-sun" aria-hidden="true"><use href="#i-sun"/></svg>
+  </button>
+  <div class="conn-panel" id="connPanel" hidden>
+    <h2>Connection</h2>
+    <label class="stack">Gateway URL <input id="baseUrl" spellcheck="false" autocomplete="off"></label>
+    <label class="stack">API key <input id="apiKey" type="password" spellcheck="false" autocomplete="off" placeholder="Paste the key from your invite"></label>
+    <div class="row" style="margin-top:2px"><span class="hint">The key is saved only in this browser.</span><span class="spacer"></span><button class="btn primary" id="connect">Connect</button></div>
   </div>
 </header>
-<nav id="tabs">
-  <button data-tab="chat" class="on">Chat</button>
-  <button data-tab="compare">Compare languages</button>
-  <button data-tab="translate">Translate</button>
-  <button data-tab="speech">Speech</button>
-  <button data-tab="code">Code</button>
-  <button data-tab="stats">Usage</button>
-</nav>
-<main>
-<section id="chat" class="on">
-  <div class="card">
-    <div class="row">
-      <label>Reply language <select id="chatLang"><option value="">Auto</option><option value="en">English</option><option value="yo">Yoruba</option><option value="ha">Hausa</option><option value="ig">Igbo</option></select></label>
-      <label>Temperature <input id="temp" type="number" min="0" max="1.5" step="0.1" value="0.1" style="width:70px"></label>
-      <label>Max tokens <input id="maxTok" type="number" min="16" max="4096" value="600" style="width:80px"></label>
-      <button class="ghost" id="clear">New chat</button>
+
+<div class="shell">
+  <nav class="sidebar" aria-label="Playground sections">
+    <a href="#chat"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>Chat</a>
+    <a href="#compare"><svg class="i" aria-hidden="true"><use href="#i-compare"/></svg>Compare languages</a>
+    <a href="#translate"><svg class="i" aria-hidden="true"><use href="#i-translate"/></svg>Translate</a>
+    <a href="#speech"><svg class="i" aria-hidden="true"><use href="#i-mic"/></svg>Speech</a>
+    <a href="#code"><svg class="i" aria-hidden="true"><use href="#i-code"/></svg>Code</a>
+    <a href="#usage"><svg class="i" aria-hidden="true"><use href="#i-usage"/></svg>Usage</a>
+    <div class="side-foot"><strong>N-ATLaS by NCAIR &amp; Awarri</strong>Yorùbá · Hausa · Igbo · Nigerian English</div>
+  </nav>
+
+  <main id="workspace" tabindex="-1">
+    <div class="keybar" id="keyBar" hidden>
+      <strong>Welcome</strong>
+      <p>Paste the API key from your invite to start building with N-ATLaS.</p>
+      <input id="keyQuick" type="password" placeholder="API key" spellcheck="false" autocomplete="off" aria-label="API key">
+      <button class="btn primary" id="keyQuickGo">Connect</button>
     </div>
-    <input id="system" placeholder="Optional system prompt (e.g. You are an agricultural extension officer)" style="width:100%;margin-bottom:10px">
-    <div class="chat" id="log"></div>
-    <div class="err" id="chatErr"></div>
-    <textarea id="prompt" placeholder="Type a message… (Ctrl/⌘+Enter to send)"></textarea>
-    <div class="row" style="margin-top:8px"><button id="send">Send</button><button class="ghost" id="stop" disabled>Stop</button></div>
-  </div>
-</section>
 
-<section id="compare">
-  <div class="card">
-    <p class="sub">Ask once, get answers pinned to each language side by side. Useful for spotting where the model is strong or weak.</p>
-    <textarea id="cmpPrompt" placeholder="e.g. Explain how to store maize after harvest to avoid weevils."></textarea>
-    <div class="row" style="margin-top:8px"><button id="cmpGo">Compare</button></div>
-    <div class="err" id="cmpErr"></div>
-  </div>
-  <div class="grid" id="cmpOut"></div>
-</section>
+    <section id="chat" class="view" aria-labelledby="chat-h">
+      <div class="view-head">
+        <div><h1 id="chat-h">Chat with N-ATLaS</h1><p class="lede">Ask in any of the four languages, or pin the language of the reply.</p></div>
+        <div class="head-tools">
+          <label class="field-inline">Model <select id="chatModel" class="model-select" aria-label="Model"></select></label>
+          <button class="btn ghost" id="clear"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>New chat</button>
+        </div>
+      </div>
+      <div class="seg langs" role="radiogroup" aria-label="Reply language" id="chatLangs"></div>
+      <div class="panel chat-panel">
+        <div class="log" id="log" aria-live="polite">
+          <div class="empty" id="chatEmpty">
+            <p class="greet"><span>Ẹ kú àbọ̀</span> · Barka da zuwa · Nnọọ · Welcome</p>
+            <p class="muted">Start with an example, or write your own message below.</p>
+            <div class="suggestions" id="suggestions"></div>
+          </div>
+        </div>
+        <div class="err" id="chatErr" role="alert" style="margin:0 16px"></div>
+        <form class="composer" id="composer">
+          <textarea id="prompt" rows="2" placeholder="Message N-ATLaS…" aria-label="Message"></textarea>
+          <div class="composer-row">
+            <details class="settings" id="settings">
+              <summary><svg class="i" aria-hidden="true"><use href="#i-sliders"/></svg>Settings</summary>
+            </details>
+            <span class="spacer"></span>
+            <span class="hint">Enter to send · Shift+Enter for a new line</span>
+            <button type="button" class="btn ghost" id="stop" hidden>Stop</button>
+            <button type="submit" class="btn primary" id="send">Send<svg class="i" aria-hidden="true"><use href="#i-send"/></svg></button>
+          </div>
+          <div class="settings-grid" id="settingsGrid" hidden>
+            <label class="stack wide">System prompt <input id="system" placeholder="e.g. You are an agricultural extension officer in Kano."></label>
+            <label class="stack">Temperature <input id="temp" type="number" min="0" max="1.5" step="0.1" value="0.1"></label>
+            <label class="stack">Max tokens <input id="maxTok" type="number" min="16" max="4096" value="1000"></label>
+          </div>
+        </form>
+      </div>
+    </section>
 
-<section id="translate">
-  <div class="card">
-    <div class="row">
-      <label>From <select id="trFrom"><option value="">Auto</option><option value="en">English</option><option value="yo">Yoruba</option><option value="ha">Hausa</option><option value="ig">Igbo</option></select></label>
-      <label>To <select id="trTo"><option value="yo">Yoruba</option><option value="ha">Hausa</option><option value="ig">Igbo</option><option value="en">English</option></select></label>
-      <button class="ghost" id="detect">Detect language</button>
-    </div>
-    <textarea id="trIn" placeholder="Text to translate"></textarea>
-    <div class="row" style="margin-top:8px"><button id="trGo">Translate</button></div>
-    <div class="err" id="trErr"></div>
-    <div class="out card" id="trOut" style="margin-top:8px"></div>
-  </div>
-</section>
+    <section id="compare" class="view" aria-labelledby="compare-h">
+      <div class="view-head"><div><h1 id="compare-h">Compare languages</h1><p class="lede">Ask once and get an answer in each language, side by side, to see where the model is strongest.</p></div></div>
+      <form class="panel prompt-card" id="cmpForm">
+        <textarea id="cmpPrompt" placeholder="e.g. Explain how to store maize after harvest to keep weevils away." aria-label="Question to compare"></textarea>
+        <div class="row">
+          <label class="field-inline">Model <select id="cmpModel" class="model-select" aria-label="Model"></select></label>
+          <span class="spacer"></span>
+          <button class="btn primary" id="cmpGo" type="submit">Compare<svg class="i" aria-hidden="true"><use href="#i-send"/></svg></button>
+        </div>
+      </form>
+      <div class="err" id="cmpErr" role="alert"></div>
+      <div class="cmp-grid" id="cmpOut"></div>
+    </section>
 
-<section id="speech">
-  <div class="card">
-    <p class="sub">Uses the official N-ATLaS ASR models (NCAIR1/*-ASR). Upload a voice note (wav, mp3, ogg, m4a) or record from your microphone.</p>
-    <div class="row">
-      <label>Spoken language <select id="spLang"><option value="yo">Yoruba</option><option value="ha">Hausa</option><option value="ig">Igbo</option><option value="en">Nigerian English</option></select></label>
-      <input type="file" id="spFile" accept="audio/*">
-      <button class="ghost" id="rec">● Record</button>
-    </div>
-    <audio id="spPlayer" controls style="width:100%;display:none"></audio>
-    <div class="row" style="margin-top:8px"><button id="spTranscribe">Transcribe</button><button id="spVoice">Ask N-ATLaS (voice chat)</button></div>
-    <div class="err" id="spErr"></div>
-    <div class="grid">
-      <div class="card"><div class="lang">Transcript</div><div class="out" id="spText"></div></div>
-      <div class="card"><div class="lang">N-ATLaS reply</div><div class="out" id="spReply"></div></div>
-    </div>
-  </div>
-</section>
+    <section id="translate" class="view" aria-labelledby="translate-h">
+      <div class="view-head"><div><h1 id="translate-h">Translate</h1><p class="lede">Translate between English, Yorùbá, Hausa and Igbo. Compare base N-ATLaS with a fine-tuned adapter side by side.</p></div></div>
+      <div class="tr-bar">
+        <select id="trFrom" aria-label="From"></select>
+        <button class="icon-btn" id="swap" aria-label="Swap languages" title="Swap languages"><svg class="i" aria-hidden="true"><use href="#i-swap"/></svg></button>
+        <select id="trTo" aria-label="To"></select>
+        <span class="spacer" style="flex:1"></span>
+        <label class="field-inline">Model <select id="trModel" aria-label="Model"></select></label>
+      </div>
+      <div class="panel tr-panes">
+        <div class="pane">
+          <textarea id="trIn" placeholder="Enter text to translate" aria-label="Text to translate"></textarea>
+          <div class="pane-foot"><button class="btn ghost sm" id="detect" type="button">Detect language</button><span class="hint" id="trDetect"></span><span class="spacer"></span><button class="btn primary" id="trGo" type="button">Translate</button></div>
+        </div>
+        <div class="pane" id="trOut" aria-live="polite"><p class="placeholder">The translation appears here.</p></div>
+      </div>
+      <div class="err" id="trErr" role="alert"></div>
+    </section>
 
-<section id="code">
-  <div class="card">
-    <p class="sub">The last chat request from this playground, as code. Copy it into your app.</p>
-    <div class="row"><select id="codeLang"><option value="python">Python SDK</option><option value="js">JavaScript SDK</option><option value="openai">OpenAI SDK (drop-in)</option><option value="curl">curl</option></select><button class="ghost" id="copy">Copy</button></div>
-    <pre id="codeOut"></pre>
-  </div>
-</section>
+    <section id="speech" class="view" aria-labelledby="speech-h">
+      <div class="view-head"><div><h1 id="speech-h">Speech</h1><p class="lede">Transcribe voice notes with the official N-ATLaS speech models, or ask N-ATLaS a spoken question and get a reply in the same language.</p></div></div>
+      <div class="panel speech">
+        <div class="speech-in">
+          <div class="seg" role="radiogroup" aria-label="Spoken language" id="spLangs"></div>
+          <button class="rec" id="rec" aria-pressed="false" aria-label="Start recording"><svg aria-hidden="true"><use href="#i-mic"/></svg></button>
+          <div class="rec-state" id="recState">Tap to record</div>
+          <label class="drop" id="drop">or drop a voice note here (wav, mp3, ogg, m4a, webm)<input type="file" id="spFile" accept="audio/*" hidden></label>
+          <audio id="spPlayer" controls hidden></audio>
+          <div class="row" style="justify-content:center;margin:0"><button class="btn ghost" id="spTranscribe">Transcribe</button><button class="btn primary" id="spVoice">Ask N-ATLaS</button></div>
+        </div>
+        <div class="speech-out" aria-live="polite">
+          <div><div class="result-label">Transcript <span id="spModel"></span></div><div class="result-text" id="spText"><span class="placeholder">Record or upload audio, then choose Transcribe or Ask N-ATLaS.</span></div></div>
+          <div><div class="result-label">N-ATLaS reply</div><div class="result-text md" id="spReply"><span class="placeholder">—</span></div></div>
+        </div>
+      </div>
+      <div class="err" id="spErr" role="alert"></div>
+    </section>
 
-<section id="stats">
-  <div class="card">
-    <div class="row"><button class="ghost" id="refreshStats">Refresh</button><span class="sub">Anonymous request counts recorded by this gateway (no prompt text is stored).</span></div>
-    <div class="grid" id="statsOut"></div>
-  </div>
-</section>
-</main>
-<div class="foot">N-ATLaS is developed by NCAIR & Awarri and released under the Awarri Open-Source Research and Innovation License. Playground by Halo Digital · AtlasKit 0.1.0</div>
+    <section id="code" class="view" aria-labelledby="code-h">
+      <div class="view-head"><div><h1 id="code-h">Use it in code</h1><p class="lede">Your last chat request as working code. Copy it into your app.</p></div></div>
+      <div class="panel code-card">
+        <div class="code-top">
+          <div class="seg" role="radiogroup" aria-label="Language" id="codeTabs"></div>
+          <span class="spacer"></span>
+          <button class="btn ghost sm" id="copy"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span></button>
+        </div>
+        <div class="install" id="install"></div>
+        <pre><code id="codeOut"></code></pre>
+      </div>
+    </section>
+
+    <section id="usage" class="view" aria-labelledby="usage-h">
+      <div class="view-head">
+        <div><h1 id="usage-h">Usage</h1><p class="lede">Anonymous request counts recorded by this gateway. Prompts and replies are never stored.</p></div>
+        <button class="btn ghost" id="refreshStats"><svg class="i" aria-hidden="true"><use href="#i-refresh"/></svg>Refresh</button>
+      </div>
+      <div class="err" id="statsErr" role="alert"></div>
+      <div class="tiles" id="tiles"></div>
+      <div class="bars-grid">
+        <figure class="panel bars"><figcaption>Requests by language</figcaption><div id="byLang"></div></figure>
+        <figure class="panel bars"><figcaption>Requests by endpoint</figcaption><div id="byEndpoint"></div></figure>
+      </div>
+    </section>
+    <footer>N-ATLaS and the N-ATLaS ASR models are developed by NCAIR and Awarri and released under the Awarri Open-Source Research and Innovation License. Playground by Halo Digital · <a href="https://github.com/Lawalshalom/atlaskit" target="_blank" rel="noopener">AtlasKit 0.1.0</a></footer>
+  </main>
+</div>
 
 <script>
 const $ = (id) => document.getElementById(id);
-const LANGS = { en: "Nigerian English", yo: "Yoruba", ha: "Hausa", ig: "Igbo" };
-const store = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
-let history = [], lastRequest = null, controller = null, recorder = null, recorded = null;
+const LANGS = {
+  en: { name: "Nigerian English", native: "English" },
+  yo: { name: "Yoruba", native: "Yorùbá" },
+  ha: { name: "Hausa", native: "Hausa" },
+  ig: { name: "Igbo", native: "Igbo" },
+};
+const HELLO = { en: "Welcome", yo: "Ẹ kú àbọ̀", ha: "Barka da zuwa", ig: "Nnọọ" };
+const SUGGESTIONS = [
+  ["yo", "Ṣàlàyé bí a ṣe ń tọ́jú àgbàdo lẹ́yìn ìkórè."],
+  ["ha", "Ba ni shawarwari uku kan yadda zan adana kuɗi."],
+  ["ig", "Kedu ka m ga-esi chekwaa ego m?"],
+  ["en", "Abeg, explain wetin inflation mean for small business owners."],
+];
+const store = {
+  get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+const icon = (name) => `<svg class="i" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const escapeHtml = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+// Minimal, safe markdown: everything is escaped first, then **bold**, `code`, lists and headings.
+function md(text) {
+  const inline = (s) => escapeHtml(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  const out = []; let list = null;
+  for (const raw of text.split("\n")) {
+    const line = raw.trimEnd();
+    if (!line) continue;   // blank lines separate paragraphs; they do not end a list ("1. …\n\n2. …")
+    const item = line.match(/^\s*(?:[-*•]|(\d+)[.)])\s+(.*)$/);
+    if (item) {
+      const type = item[1] ? "ol" : "ul";
+      if (list !== type) { if (list) out.push(`</${list}>`); out.push(type === "ol" ? `<ol start="${+item[1]}">` : "<ul>"); list = type; }
+      out.push(`<li>${inline(item[2])}</li>`); continue;
+    }
+    if (list) { out.push(`</${list}>`); list = null; }
+    if (/^#{1,6}\s/.test(line)) out.push(`<p class="h">${inline(line.replace(/^#+\s*/, ""))}</p>`);
+    else out.push(`<p>${inline(line)}</p>`);
+  }
+  if (list) out.push(`</${list}>`);
+  return out.join("");
+}
+
+let history = [], lastRequest = null, controller = null, recorder = null, audioBlob = null, recTimer = null;
+let chatModels = [{ id: "n-atlas", label: "N-ATLaS (base)" }];
+
+// ---------------------------------------------------------------- theme
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  $("themeToggle").setAttribute("aria-label", t === "dark" ? "Switch to light mode" : "Switch to dark mode");
+}
+applyTheme(document.documentElement.dataset.theme);
+$("themeToggle").onclick = () => {
+  const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(t); store.set("atlas.theme", t);
+};
+
+// ---------------------------------------------------------------- segmented controls
+function segmented(el, options, value, onChange) {
+  el.innerHTML = "";
+  for (const [val, label] of options) {
+    const b = document.createElement("button");
+    b.type = "button"; b.setAttribute("role", "radio"); b.dataset.value = val; b.textContent = label;
+    b.setAttribute("aria-checked", String(val === value));
+    b.onclick = () => { el.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x === b))); onChange?.(val); };
+    el.appendChild(b);
+  }
+  return { get value() { return el.querySelector("[aria-checked=true]")?.dataset.value ?? ""; },
+           set value(v) { el.querySelectorAll("button").forEach((x) => x.setAttribute("aria-checked", String(x.dataset.value === v))); } };
+}
+const chatLang = segmented($("chatLangs"), [["", "Auto"], ...Object.entries(LANGS).map(([c, l]) => [c, l.native])], "");
+const spLang = segmented($("spLangs"), [["yo", "Yorùbá"], ["ha", "Hausa"], ["ig", "Igbo"], ["en", "English"]], "yo");
+const codeTab = segmented($("codeTabs"), [["python", "Python"], ["js", "JavaScript"], ["openai", "OpenAI SDK"], ["curl", "curl"]], "python", () => renderCode());
+
+const langOptions = (el, withAuto, selected) => {
+  el.innerHTML = (withAuto ? `<option value="">Auto-detect</option>` : "") +
+    Object.entries(LANGS).map(([c, l]) => `<option value="${c}">${l.native}</option>`).join("");
+  el.value = selected;
+};
+langOptions($("trFrom"), true, "en");
+langOptions($("trTo"), false, "yo");
+
+// ---------------------------------------------------------------- connection
 $("baseUrl").value = store.get("atlas.url", location.origin.startsWith("http") ? location.origin : "http://localhost:8080");
 $("apiKey").value = store.get("atlas.key", "");
-const base = () => $("baseUrl").value.replace(/\/+$/, "");
-const headers = (json = true) => { const h = {}; if (json) h["Content-Type"] = "application/json"; const k = $("apiKey").value.trim(); if (k) h.Authorization = "Bearer " + k; return h; };
-
+const base = () => $("baseUrl").value.trim().replace(/\/+$/, "");
+const headers = (json = true) => {
+  const h = {}; if (json) h["Content-Type"] = "application/json";
+  const k = $("apiKey").value.trim(); if (k) h.Authorization = "Bearer " + k; return h;
+};
 async function api(path, body, opts = {}) {
-  const res = await fetch(base() + path, { method: body ? "POST" : "GET", headers: headers(!(body instanceof FormData)), body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined, signal: opts.signal });
-  if (!res.ok) { let m = await res.text(); try { m = JSON.parse(m).error.message; } catch {} throw new Error(m || res.statusText); }
+  const isForm = body instanceof FormData;
+  const res = await fetch(base() + path, { method: body ? "POST" : "GET", headers: headers(!isForm),
+    body: isForm ? body : body ? JSON.stringify(body) : undefined, signal: opts.signal });
+  if (!res.ok) { let m = await res.text(); try { m = JSON.parse(m).error.message; } catch {} const e = new Error(m || res.statusText); e.status = res.status; throw e; }
   return opts.raw ? res : res.json();
 }
+function setStatus(kind, text) { $("dot").className = "dot " + kind; $("status").textContent = text; }
+function togglePanel(open) { $("connPanel").hidden = !open; $("connToggle").setAttribute("aria-expanded", String(open)); }
+$("connToggle").onclick = () => togglePanel($("connPanel").hidden);
+document.addEventListener("click", (e) => { if (!$("connPanel").hidden && !e.target.closest("#connPanel,#connToggle")) togglePanel(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") togglePanel(false); });
 
-async function checkHealth() {
-  $("dot").className = "dot"; $("status").textContent = "checking…";
+async function connect() {
+  store.set("atlas.url", base()); store.set("atlas.key", $("apiKey").value.trim());
+  $("keyBar").hidden = !!$("apiKey").value.trim();
+  setStatus("wait", "Checking…");
   try {
-    const res = await fetch(base() + "/health"); const h = await res.json();
-    $("dot").className = "dot " + (h.upstream ? "ok" : "bad");
-    $("status").textContent = h.upstream ? `connected · ${h.model}` : "gateway up, model offline";
-  } catch { $("dot").className = "dot bad"; $("status").textContent = "not reachable"; }
-}
-$("connect").onclick = () => { store.set("atlas.url", base()); store.set("atlas.key", $("apiKey").value.trim()); checkHealth(); };
-
-document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => {
-  document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
-  document.querySelectorAll("main section").forEach((s) => s.classList.toggle("on", s.id === b.dataset.tab));
-  if (b.dataset.tab === "code") renderCode();
-  if (b.dataset.tab === "stats") loadStats();
-});
-
-function bubble(role, text) {
-  const d = document.createElement("div"); d.className = "msg " + role; d.textContent = text; $("log").appendChild(d); $("log").scrollTop = 1e9; return d;
-}
-function addFeedback(el, lang) {
-  const meta = document.createElement("div"); meta.className = "meta"; meta.innerHTML = "Was this good? ";
-  for (const [r, label] of [[1, "👍"], [-1, "👎"]]) {
-    const b = document.createElement("button"); b.className = "ghost"; b.textContent = label;
-    b.onclick = async () => { try { await api("/v1/atlas/feedback", { rating: r, language: lang || null, tag: "playground" }); meta.textContent = "Thanks for the feedback"; } catch (e) { meta.textContent = e.message; } };
-    meta.appendChild(b);
+    const h = await (await fetch(base() + "/health")).json();
+    if (!h.upstream) { setStatus("wait", "Model is loading"); return; }
+  } catch { setStatus("bad", "Gateway not reachable"); return; }
+  try {
+    const models = (await api("/v1/models")).data.filter((m) => !m.task);
+    chatModels = models.map((m) => ({ id: m.id, label: m.id === "n-atlas" ? "N-ATLaS (base)" : `${m.id} (fine-tuned)` }));
+    fillModelSelects();
+    setStatus("ok", "Connected · N-ATLaS");
+  } catch (e) {
+    setStatus("bad", e.status === 401 ? "API key needed" : "Connection error");
+    if (e.status === 401) { $("keyBar").hidden = false; }
   }
-  el.appendChild(meta);
+}
+function fillModelSelects() {
+  for (const id of ["chatModel", "cmpModel"]) {
+    const el = $(id), prev = el.value;
+    el.innerHTML = chatModels.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.label)}</option>`).join("");
+    if (chatModels.some((m) => m.id === prev)) el.value = prev;
+  }
+  const tr = $("trModel"), prev = tr.value, tuned = chatModels.filter((m) => m.id !== "n-atlas");
+  tr.innerHTML = chatModels.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.label)}</option>`).join("") +
+    (tuned.length ? `<option value="__both__">Base vs fine-tuned</option>` : "");
+  tr.value = trTouched && [...tr.options].some((o) => o.value === prev) ? prev : (tuned.length ? "__both__" : "n-atlas");
+}
+let trTouched = false;
+$("trModel").onchange = () => { trTouched = true; };
+fillModelSelects();
+$("connect").onclick = () => { togglePanel(false); connect(); };
+$("keyQuickGo").onclick = () => { $("apiKey").value = $("keyQuick").value.trim(); connect(); };
+$("keyQuick").onkeydown = (e) => { if (e.key === "Enter") $("keyQuickGo").click(); };
+$("keyBar").hidden = !!$("apiKey").value.trim();
+
+// ---------------------------------------------------------------- tabs (deep-linkable: /#speech)
+const TABS = ["chat", "compare", "translate", "speech", "code", "usage"];
+function showTab() {
+  let t = location.hash.slice(1); if (t === "stats") t = "usage"; if (!TABS.includes(t)) t = "chat";
+  document.querySelectorAll(".view").forEach((v) => v.classList.toggle("on", v.id === t));
+  document.querySelectorAll(".sidebar a").forEach((a) => {
+    if (a.hash === "#" + t) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  });
+  requestAnimationFrame(() => window.scrollTo(0, 0)); togglePanel(false);   // after the browser's own anchor scroll
+  if (t === "code") renderCode();
+  if (t === "usage") loadStats();
+}
+window.addEventListener("hashchange", showTab);
+
+// ---------------------------------------------------------------- feedback & copy
+function metaBar(lang, model, text) {
+  const meta = document.createElement("div"); meta.className = "meta";
+  if (lang) meta.insertAdjacentHTML("beforeend", `<span class="chip">${LANGS[lang].native}</span>`);
+  if (model && model !== "n-atlas") meta.insertAdjacentHTML("beforeend", `<span>${escapeHtml(model)}</span>`);
+  const info = document.createElement("span"); meta.appendChild(info);
+  const acts = document.createElement("span"); acts.className = "acts"; meta.appendChild(acts);
+  for (const [rating, name, label] of [[1, "up", "Good answer"], [-1, "down", "Bad answer"]]) {
+    const b = document.createElement("button"); b.innerHTML = icon(name); b.title = label; b.setAttribute("aria-label", label);
+    b.onclick = async () => {
+      try { await api("/v1/atlas/feedback", { rating, language: lang || null, tag: "playground" });
+        acts.querySelectorAll("button").forEach((x) => x.classList.toggle("picked", x === b)); }
+      catch (e) { info.textContent = e.message; }
+    };
+    acts.appendChild(b);
+  }
+  const c = document.createElement("button"); c.innerHTML = icon("copy"); c.title = "Copy"; c.setAttribute("aria-label", "Copy answer");
+  c.onclick = () => { navigator.clipboard?.writeText(text()); c.classList.add("picked"); setTimeout(() => c.classList.remove("picked"), 900); };
+  acts.appendChild(c);
+  return { meta, info };
 }
 
+// ---------------------------------------------------------------- chat
+SUGGESTIONS.forEach(([lang, text]) => {
+  const b = document.createElement("button"); b.type = "button"; b.className = "suggestion";
+  b.innerHTML = `<span class="s-lang">${LANGS[lang].native}</span><span class="s-text">${escapeHtml(text)}</span>`;
+  b.onclick = () => { chatLang.value = lang; $("prompt").value = text; send(); };
+  $("suggestions").appendChild(b);
+});
+$("settings").addEventListener("toggle", () => { $("settingsGrid").hidden = !$("settings").open; });
+
+function userBubble(text) {
+  const row = document.createElement("div"); row.className = "msg user";
+  const b = document.createElement("div"); b.className = "bubble"; b.textContent = text; row.appendChild(b);
+  $("log").appendChild(row); $("log").scrollTop = 1e9;
+}
+function assistantBubble() {
+  const row = document.createElement("div"); row.className = "msg assistant";
+  row.innerHTML = `<div class="avatar" aria-hidden="true">N</div><div class="body"><div class="md"><span class="typing" aria-label="N-ATLaS is writing"><i></i><i></i><i></i></span></div></div>`;
+  $("log").appendChild(row); $("log").scrollTop = 1e9;
+  return { content: row.querySelector(".md"), body: row.querySelector(".body") };
+}
 async function send() {
   const text = $("prompt").value.trim(); if (!text || controller) return;
-  $("chatErr").textContent = ""; $("prompt").value = "";
-  history.push({ role: "user", content: text }); bubble("user", text);
-  const lang = $("chatLang").value, sys = $("system").value.trim();
+  $("chatEmpty").hidden = true; $("chatErr").textContent = ""; $("prompt").value = "";
+  history.push({ role: "user", content: text }); userBubble(text);
+  const lang = chatLang.value, sys = $("system").value.trim(), model = $("chatModel").value || "n-atlas";
   const messages = sys ? [{ role: "system", content: sys }, ...history] : [...history];
-  const body = { model: "n-atlas", messages, stream: true, temperature: +$("temp").value, max_tokens: +$("maxTok").value };
+  const body = { model, messages, stream: true, temperature: +$("temp").value, max_tokens: +$("maxTok").value };
   if (lang) body.atlas_language = lang;
   lastRequest = { ...body, stream: false };
-  const el = bubble("assistant", "…"); let out = "";
-  controller = new AbortController(); $("send").disabled = true; $("stop").disabled = false;
+  const el = assistantBubble(); let out = ""; const t0 = performance.now(); let tokens = null;
+  controller = new AbortController(); $("send").disabled = true; $("stop").hidden = false;
   try {
     const res = await api("/v1/chat/completions", body, { raw: true, signal: controller.signal });
     const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
@@ -208,92 +661,196 @@ async function send() {
       while ((i = buf.indexOf("\n")) >= 0) {
         const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
         if (!line.startsWith("data:") || line.endsWith("[DONE]")) continue;
-        try { const d = JSON.parse(line.slice(5)).choices?.[0]?.delta?.content; if (d) { out += d; el.textContent = out; $("log").scrollTop = 1e9; } } catch {}
+        try {
+          const chunk = JSON.parse(line.slice(5));
+          if (chunk.usage?.completion_tokens) tokens = chunk.usage.completion_tokens;
+          const d = chunk.choices?.[0]?.delta?.content;
+          if (d) { out += d; el.content.innerHTML = md(out); $("log").scrollTop = 1e9; }
+        } catch {}
       }
     }
   } catch (e) { if (e.name !== "AbortError") $("chatErr").textContent = e.message; }
-  if (!out) el.textContent = "(no response)";
-  history.push({ role: "assistant", content: out }); addFeedback(el, lang);
-  controller = null; $("send").disabled = false; $("stop").disabled = true;
+  if (!out) el.content.innerHTML = `<p class="muted">No response.</p>`;
+  history.push({ role: "assistant", content: out });
+  const { meta, info } = metaBar(lang, model, () => out);
+  info.textContent = `${((performance.now() - t0) / 1000).toFixed(1)}s${tokens ? ` · ${tokens} tokens` : ""}`;
+  el.body.appendChild(meta);
+  controller = null; $("send").disabled = false; $("stop").hidden = true; $("prompt").focus();
 }
-$("send").onclick = send;
+$("composer").onsubmit = (e) => { e.preventDefault(); send(); };
 $("stop").onclick = () => controller?.abort();
-$("prompt").onkeydown = (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) send(); };
-$("clear").onclick = () => { history = []; $("log").innerHTML = ""; };
+$("prompt").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } };
+$("prompt").oninput = () => { const t = $("prompt"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 220) + "px"; };
+$("clear").onclick = () => { controller?.abort(); history = []; $("log").querySelectorAll(".msg").forEach((m) => m.remove()); $("chatEmpty").hidden = false; $("chatErr").textContent = ""; };
 
-$("cmpGo").onclick = async () => {
+// ---------------------------------------------------------------- compare
+$("cmpForm").onsubmit = async (e) => {
+  e.preventDefault();
   const text = $("cmpPrompt").value.trim(); if (!text) return;
+  const model = $("cmpModel").value || "n-atlas";
   $("cmpErr").textContent = ""; $("cmpOut").innerHTML = ""; $("cmpGo").disabled = true;
-  await Promise.all(Object.entries(LANGS).map(async ([code, name]) => {
-    const card = document.createElement("div"); card.className = "card";
-    card.innerHTML = `<div class="lang">${name}</div><div class="out">…</div>`; $("cmpOut").appendChild(card);
+  await Promise.all(Object.entries(LANGS).map(async ([code, l], idx) => {
+    const col = document.createElement("article"); col.className = "panel col"; col.style.animationDelay = `${idx * 60}ms`;
+    col.innerHTML = `<header><h3>${l.native}</h3><span class="hello">${HELLO[code]}</span></header><div class="md"><div class="skeleton"><i></i><i></i><i></i></div></div>`;
+    $("cmpOut").appendChild(col);
     const t0 = performance.now();
     try {
-      const r = await api("/v1/chat/completions", { model: "n-atlas", messages: [{ role: "user", content: text }], atlas_language: code, max_tokens: 500 });
-      card.querySelector(".out").textContent = r.choices[0].message.content;
-      const m = document.createElement("div"); m.className = "sub"; m.textContent = `${((performance.now() - t0) / 1000).toFixed(1)}s · ${r.usage?.completion_tokens ?? "?"} tokens`; card.appendChild(m);
-      const holder = document.createElement("div"); holder.className = "msg"; holder.style.padding = 0; card.appendChild(holder); addFeedback(holder, code);
-    } catch (e) { card.querySelector(".out").textContent = "Error: " + e.message; }
+      const r = await api("/v1/chat/completions", { model, messages: [{ role: "user", content: text }], atlas_language: code, max_tokens: 500 });
+      const answer = r.choices[0].message.content;
+      col.querySelector(".md").innerHTML = md(answer);
+      const { meta, info } = metaBar(null, null, () => answer);
+      info.textContent = `${((performance.now() - t0) / 1000).toFixed(1)}s · ${r.usage?.completion_tokens ?? "?"} tokens`;
+      col.appendChild(meta);
+    } catch (err) { col.querySelector(".md").innerHTML = `<p class="err">${escapeHtml(err.message)}</p>`; }
   }));
   $("cmpGo").disabled = false;
 };
 
+// ---------------------------------------------------------------- translate
+function trResult(label, text) {
+  const d = document.createElement("div"); d.className = "tr-result";
+  d.innerHTML = `<div class="tr-label">${escapeHtml(label)}</div><div class="tr-text"></div>`;
+  d.querySelector(".tr-text").textContent = text; return d;
+}
 $("trGo").onclick = async () => {
-  const text = $("trIn").value.trim(); if (!text) return; $("trErr").textContent = ""; $("trOut").textContent = "…";
-  try { $("trOut").textContent = (await api("/v1/atlas/translate", { text, target: $("trTo").value, source: $("trFrom").value || null })).translation; }
-  catch (e) { $("trOut").textContent = ""; $("trErr").textContent = e.message; }
+  const text = $("trIn").value.trim(); if (!text) return;
+  $("trErr").textContent = ""; $("trGo").disabled = true;
+  const choice = $("trModel").value || "n-atlas";
+  const tuned = chatModels.find((m) => m.id !== "n-atlas");
+  const runs = choice === "__both__" ? [chatModels[0], tuned] : [chatModels.find((m) => m.id === choice) || chatModels[0]];
+  $("trOut").innerHTML = runs.map(() => `<div class="skeleton"><i></i><i></i><i></i></div>`).join("");
+  try {
+    const results = await Promise.all(runs.map((m) => api("/v1/atlas/translate",
+      { text, target: $("trTo").value, source: $("trFrom").value || null, ...(m.id !== "n-atlas" ? { model: m.id } : {}) })));
+    $("trOut").innerHTML = "";
+    results.forEach((r, i) => $("trOut").appendChild(trResult(runs.length > 1 ? runs[i].label : LANGS[$("trTo").value].native, r.translation)));
+  } catch (e) { $("trOut").innerHTML = `<p class="placeholder">The translation appears here.</p>`; $("trErr").textContent = e.message; }
+  $("trGo").disabled = false;
 };
 $("detect").onclick = async () => {
   const text = $("trIn").value.trim(); if (!text) return;
-  try { const r = await api("/v1/atlas/detect-language", { text }); $("trFrom").value = r.language; $("trErr").textContent = `Detected ${LANGS[r.language]} (confidence ${Math.round(r.confidence * 100)}%)`; }
-  catch (e) { $("trErr").textContent = e.message; }
+  try {
+    const r = await api("/v1/atlas/detect-language", { text });
+    $("trFrom").value = r.language;
+    $("trDetect").textContent = `Detected ${LANGS[r.language].native} · ${Math.round(r.confidence * 100)}%`;
+  } catch (e) { $("trErr").textContent = e.message; }
 };
+$("swap").onclick = () => {
+  const from = $("trFrom").value, to = $("trTo").value;
+  if (!from) return;
+  $("trFrom").value = to; $("trTo").value = from;
+  const first = $("trOut").querySelector(".tr-text");
+  if (first) { $("trIn").value = first.textContent; $("trOut").innerHTML = `<p class="placeholder">The translation appears here.</p>`; }
+};
+$("trIn").onkeydown = (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) $("trGo").click(); };
 
-$("spFile").onchange = () => { recorded = null; const f = $("spFile").files[0]; if (f) { $("spPlayer").src = URL.createObjectURL(f); $("spPlayer").style.display = "block"; } };
+// ---------------------------------------------------------------- speech
+function setAudio(blob) {
+  audioBlob = blob; $("spPlayer").src = URL.createObjectURL(blob); $("spPlayer").hidden = false;
+  $("recState").textContent = blob.name ? blob.name : "Recording ready";
+}
+$("spFile").onchange = () => { const f = $("spFile").files[0]; if (f) setAudio(f); };
+for (const ev of ["dragenter", "dragover"]) $("drop").addEventListener(ev, (e) => { e.preventDefault(); $("drop").classList.add("over"); });
+for (const ev of ["dragleave", "drop"]) $("drop").addEventListener(ev, (e) => { e.preventDefault(); $("drop").classList.remove("over"); });
+$("drop").addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) setAudio(f); });
 $("rec").onclick = async () => {
   if (recorder) { recorder.stop(); return; }
+  $("spErr").textContent = "";
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const chunks = []; recorder = new MediaRecorder(stream);
     recorder.ondataavailable = (e) => chunks.push(e.data);
-    recorder.onstop = () => { recorded = new Blob(chunks, { type: recorder.mimeType }); stream.getTracks().forEach((t) => t.stop()); recorder = null; $("rec").textContent = "● Record"; $("spPlayer").src = URL.createObjectURL(recorded); $("spPlayer").style.display = "block"; };
-    recorder.start(); $("rec").textContent = "■ Stop";
+    recorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop()); clearInterval(recTimer);
+      const type = recorder.mimeType || "audio/webm"; recorder = null;
+      $("rec").classList.remove("on"); $("rec").setAttribute("aria-pressed", "false"); $("rec").setAttribute("aria-label", "Start recording");
+      setAudio(new Blob(chunks, { type }));
+    };
+    recorder.start();
+    const t0 = Date.now();
+    $("rec").classList.add("on"); $("rec").setAttribute("aria-pressed", "true"); $("rec").setAttribute("aria-label", "Stop recording");
+    $("recState").textContent = "Recording 0:00 · tap to stop";
+    recTimer = setInterval(() => { const s = Math.floor((Date.now() - t0) / 1000); $("recState").textContent = `Recording ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} · tap to stop`; }, 500);
   } catch (e) { $("spErr").textContent = "Microphone unavailable: " + e.message; }
 };
 async function speech(path) {
-  const audio = recorded || $("spFile").files[0]; if (!audio) { $("spErr").textContent = "Choose or record audio first"; return; }
-  const fd = new FormData(); fd.append("language", $("spLang").value); fd.append("file", audio, audio.name || "recording.webm");
-  $("spErr").textContent = ""; $("spText").textContent = "…"; if (path.includes("voice")) $("spReply").textContent = "…";
-  try { const r = await api(path, fd); $("spText").textContent = r.text ?? r.transcript; if (r.reply) $("spReply").textContent = r.reply; }
-  catch (e) { $("spErr").textContent = e.message; $("spText").textContent = ""; $("spReply").textContent = ""; }
+  if (!audioBlob) { $("spErr").textContent = "Record or upload audio first."; return; }
+  const ext = (audioBlob.type.split("/")[1] || "webm").split(";")[0];
+  const fd = new FormData(); fd.append("language", spLang.value); fd.append("file", audioBlob, audioBlob.name || `recording.${ext}`);
+  const voice = path.includes("voice");
+  $("spErr").textContent = ""; $("spModel").textContent = "";
+  $("spText").innerHTML = `<div class="skeleton"><i></i><i></i></div>`;
+  $("spReply").innerHTML = voice ? `<div class="skeleton"><i></i><i></i><i></i></div>` : `<span class="placeholder">—</span>`;
+  $("spTranscribe").disabled = $("spVoice").disabled = true;
+  try {
+    const r = await api(path, fd);
+    $("spText").textContent = r.text ?? r.transcript;
+    $("spModel").textContent = r.model || `${LANGS[spLang.value].native} · ${r.audio_seconds ?? r.duration ?? "?"}s`;
+    if (r.reply) $("spReply").innerHTML = md(r.reply);
+  } catch (e) {
+    $("spErr").textContent = e.message;
+    $("spText").innerHTML = `<span class="placeholder">—</span>`; $("spReply").innerHTML = `<span class="placeholder">—</span>`;
+  }
+  $("spTranscribe").disabled = $("spVoice").disabled = false;
 }
 $("spTranscribe").onclick = () => speech("/v1/audio/transcriptions");
 $("spVoice").onclick = () => speech("/v1/atlas/voice-chat");
 
+// ---------------------------------------------------------------- code
+const INSTALL = {
+  python: 'pip install "git+https://github.com/Lawalshalom/atlaskit#subdirectory=sdk/python"',
+  js: "git clone https://github.com/Lawalshalom/atlaskit && npm install ./atlaskit/sdk/js",
+  openai: "pip install openai   # no AtlasKit install needed",
+  curl: "# nothing to install",
+};
 function renderCode() {
-  const r = lastRequest || { model: "n-atlas", messages: [{ role: "user", content: "Bawo ni o se le ran agbe lowo?" }], atlas_language: "yo", temperature: 0.1, max_tokens: 600 };
-  const url = base(), msgs = JSON.stringify(r.messages, null, 2), lang = r.atlas_language;
-  const py = `from atlaskit import AtlasKit\n\natlas = AtlasKit("${url}", api_key="YOUR_KEY")\nreply = atlas.chat(\n    ${msgs.replace(/\n/g, "\n    ")},\n${lang ? `    language="${lang}",\n` : ""}    temperature=${r.temperature}, max_tokens=${r.max_tokens},\n)\nprint(reply.text)`;
-  const js = `import { AtlasKit } from "atlaskit";\n\nconst atlas = new AtlasKit({ baseUrl: "${url}", apiKey: "YOUR_KEY" });\nconst { text } = await atlas.chat(${msgs}, {${lang ? ` language: "${lang}",` : ""} temperature: ${r.temperature}, maxTokens: ${r.max_tokens} });\nconsole.log(text);`;
-  const oa = `from openai import OpenAI  # existing OpenAI code works unchanged\n\nclient = OpenAI(base_url="${url}/v1", api_key="YOUR_KEY")\nresp = client.chat.completions.create(\n    model="n-atlas",\n    messages=${msgs.replace(/\n/g, "\n    ")},\n${lang ? `    extra_body={"atlas_language": "${lang}"},\n` : ""})\nprint(resp.choices[0].message.content)`;
+  const r = lastRequest || { model: "n-atlas", messages: [{ role: "user", content: "Báwo ni mo ṣe lè ran àwọn àgbẹ̀ lọ́wọ́?" }], atlas_language: "yo", temperature: 0.1, max_tokens: 1000 };
+  const url = base(), msgs = JSON.stringify(r.messages, null, 2), lang = r.atlas_language, tuned = r.model && r.model !== "n-atlas";
+  const py = `from atlaskit import AtlasKit\n\natlas = AtlasKit("${url}", api_key="YOUR_KEY")\nreply = atlas.chat(\n    ${msgs.replace(/\n/g, "\n    ")},\n${lang ? `    language="${lang}",\n` : ""}${tuned ? `    model="${r.model}",\n` : ""}    temperature=${r.temperature}, max_tokens=${r.max_tokens},\n)\nprint(reply.text)`;
+  const js = `import { AtlasKit } from "atlaskit";\n\nconst atlas = new AtlasKit({ baseUrl: "${url}", apiKey: "YOUR_KEY" });\nconst { text } = await atlas.chat(${msgs}, {${lang ? ` language: "${lang}",` : ""}${tuned ? ` model: "${r.model}",` : ""} temperature: ${r.temperature}, maxTokens: ${r.max_tokens} });\nconsole.log(text);`;
+  const oa = `from openai import OpenAI  # existing OpenAI code works unchanged\n\nclient = OpenAI(base_url="${url}/v1", api_key="YOUR_KEY")\nresp = client.chat.completions.create(\n    model="${r.model || "n-atlas"}",\n    messages=${msgs.replace(/\n/g, "\n    ")},\n${lang ? `    extra_body={"atlas_language": "${lang}"},\n` : ""})\nprint(resp.choices[0].message.content)`;
   const curl = `curl ${url}/v1/chat/completions \\\n  -H "Authorization: Bearer YOUR_KEY" -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(r).replace(/'/g, "'\\''")}'`;
-  $("codeOut").textContent = { python: py, js, openai: oa, curl }[$("codeLang").value];
+  const tab = codeTab.value || "python";
+  $("codeOut").textContent = { python: py, js, openai: oa, curl }[tab];
+  $("install").textContent = "$ " + INSTALL[tab];
 }
-$("codeLang").onchange = renderCode;
-$("copy").onclick = () => navigator.clipboard?.writeText($("codeOut").textContent);
+$("copy").onclick = () => {
+  navigator.clipboard?.writeText($("codeOut").textContent);
+  const s = $("copy").querySelector("span"); s.textContent = "Copied"; setTimeout(() => { s.textContent = "Copy"; }, 1200);
+};
 
+// ---------------------------------------------------------------- usage
+const ENDPOINT_NAMES = { chat: "Chat", translate: "Translate", summarize: "Summarise", transcribe: "Transcribe", voice_chat: "Voice chat",
+  detect_language: "Detect language", feedback: "Feedback", models: "List models" };
+function bars(el, entries, nameOf) {
+  el.innerHTML = "";
+  const max = Math.max(1, ...entries.map(([, v]) => v));
+  if (!entries.length) { el.innerHTML = `<p class="muted">No requests yet.</p>`; return; }
+  for (const [k, v] of entries) {
+    const row = document.createElement("div"); row.className = "bar-row"; row.title = `${nameOf(k)}: ${v} requests`;
+    row.innerHTML = `<span class="name"></span><span class="track"><span class="fill" style="width:0"></span></span><span class="num">${v}</span>`;
+    row.querySelector(".name").textContent = nameOf(k);
+    el.appendChild(row);
+    requestAnimationFrame(() => { row.querySelector(".fill").style.width = `${(v / max) * 100}%`; });
+  }
+}
 async function loadStats() {
-  $("statsOut").innerHTML = "";
+  $("statsErr").textContent = "";
   try {
     const s = await api("/v1/atlas/stats");
-    const tiles = [["Requests", s.total_requests], ["Unique clients", s.unique_clients], ["Feedback 👍", s.feedback.positive], ["Feedback 👎", s.feedback.negative]];
-    for (const [k, v] of tiles) { const c = document.createElement("div"); c.className = "card stat"; c.innerHTML = `${v}<small>${k}</small>`; $("statsOut").appendChild(c); }
-    const pre = document.createElement("pre"); pre.textContent = JSON.stringify({ by_language: s.by_language, by_endpoint: s.by_endpoint, median_latency_ms: s.median_latency_ms }, null, 2);
-    const c = document.createElement("div"); c.className = "card"; c.style.gridColumn = "1/-1"; c.appendChild(pre); $("statsOut").appendChild(c);
-  } catch (e) { $("statsOut").textContent = e.message; }
+    const rate = s.total_requests ? Math.round((s.successful_requests / s.total_requests) * 100) : 0;
+    const tiles = [[s.total_requests, "Requests"], [s.unique_clients, "Unique clients"], [`${rate}%`, "Successful"],
+      [`${s.feedback.positive} / ${s.feedback.negative}`, "Feedback 👍 / 👎"]];
+    $("tiles").innerHTML = tiles.map(([v, k]) => `<div class="panel tile"><div class="v">${escapeHtml(String(v))}</div><div class="k">${k}</div></div>`).join("");
+    const langName = (k) => (LANGS[k] ? LANGS[k].native : k === "auto" ? "Not pinned" : k);
+    bars($("byLang"), Object.entries(s.by_language).sort((a, b) => b[1] - a[1]), langName);
+    bars($("byEndpoint"), Object.entries(s.by_endpoint).sort((a, b) => b[1] - a[1]), (k) => ENDPOINT_NAMES[k] || k);
+  } catch (e) { $("statsErr").textContent = e.status === 401 ? "Connect with your API key to see usage." : e.message; }
 }
 $("refreshStats").onclick = loadStats;
-checkHealth();
+
+showTab();
+connect();
 </script>
 </body>
 </html>

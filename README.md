@@ -11,10 +11,18 @@ Built by **Halo Media and Digital Limited (Halo Digital)** for the National AI I
 | **Gateway** (`gateway/`) | An OpenAI-compatible HTTP API in front of N-ATLaS served by vLLM. It also exposes the four official N-ATLaS ASR models as `/v1/audio/transcriptions`, and adds translation, summarisation, language detection and voice-chat endpoints. It includes API keys and a privacy-preserving usage log. |
 | **Python SDK** (`sdk/python/`) | Zero-dependency client: `chat`, `stream`, `Conversation`, `transcribe`, `voice_chat`, `translate`, `summarize`, `detect_language`, plus an `atlaskit` CLI. |
 | **JavaScript SDK** (`sdk/js/`) | Zero-dependency ESM client for Node 18+, Deno, Bun and browsers, with the same API. |
-| **Playground** (`playground/`) | Browser UI served at `/`. It covers streaming chat, side-by-side comparison of all four languages, translation, speech (upload or record), copy-paste code generation and usage stats. |
+| **Playground** (`playground/`) | Browser UI served at `/`, in light or dark mode. It covers streaming chat with a model picker (base or fine-tuned), side-by-side comparison of all four languages, translation with base vs fine-tuned shown together, speech (upload or record), copy-paste code generation and usage stats. Each tab has a deep link, for example `/#speech`. |
 | **Fine-tuning kit** (`finetune/`) | LoRA fine-tuning of N-ATLaS from OpenAI-format JSONL, rendered with N-ATLaS's own chat template. The adapter is served next to the base model and selected by name (`model="natlas-mt"`). |
 | **Evaluation harness** (`eval/`) | Benchmarks one or more N-ATLaS deployments or adapters (for example base vs fine-tuned) on FLORES+ translation (chrF), FLEURS speech recognition (WER/CER), language ID and QA. It writes JSON and Markdown reports. |
 | **RunPod deployment** (`deploy/runpod/`) | Two scripts take a GPU pod to a public HTTPS endpoint. |
+
+![AtlasKit playground: a Yorùbá answer from N-ATLaS](docs/img/playground-chat-light.png)
+
+<details><summary>Dark mode: base N-ATLaS vs the fine-tuned adapter in Translate</summary>
+
+![Translate view in dark mode, base vs fine-tuned](docs/img/playground-translate-dark.png)
+
+</details>
 
 ## Measured results
 
