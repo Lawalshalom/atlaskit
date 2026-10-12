@@ -26,6 +26,12 @@ Built by **Halo Media and Digital Limited (Halo Digital)** for the National AI I
 
 </details>
 
+## Live demo
+
+The playground has a permanent home on GitHub Pages: [lawalshalom.github.io/atlaskit](https://lawalshalom.github.io/atlaskit/). It calls the AtlasKit API at the address in [`playground/hosted-api-url.txt`](playground/hosted-api-url.txt), so moving the backend never changes the link.
+
+During the beta test on 12 October 2026, the API and N-ATLaS ran on an always-on RunPod GPU pod (`heou1vjm7ockft-8080.proxy.runpod.net`) costing about $0.72 an hour, or roughly $17 a day, whether or not anyone was using it. **To keep running costs down, that pod will be terminated.** N-ATLaS will move to a scale-to-zero GPU backend that bills only while it is answering, and `hosted-api-url.txt` will then point at the new address. After a quiet spell, the first request may take one to three minutes while a GPU starts; later requests run at normal speed. The pod address above will stop working once it is terminated. Use the GitHub Pages link instead.
+
 ## Measured results
 
 These come from live runs on one RTX PRO 4500 GPU on 12 Oct 2026. Details and raw outputs are in [`eval/results/2026-10-12/`](eval/results/2026-10-12/README.md).
