@@ -6,6 +6,8 @@ AtlasKit makes [N-ATLaS](https://huggingface.co/NCAIR1/N-ATLaS), Nigeria's open-
 
 Built by **Halo Media and Digital Limited (Halo Digital)** for the National AI Innovation Challenge 2026, Problem Statement 01 (Developer Infrastructure).
 
+**Try it live:** [lawalshalom.github.io/atlaskit](https://lawalshalom.github.io/atlaskit/). Paste an API key and click Connect.
+
 | Component | What it does |
 |---|---|
 | **Gateway** (`gateway/`) | An OpenAI-compatible HTTP API in front of N-ATLaS served by vLLM. It also exposes the four official N-ATLaS ASR models as `/v1/audio/transcriptions`, and adds translation, summarisation, language detection and voice-chat endpoints. It includes API keys and a privacy-preserving usage log. |
