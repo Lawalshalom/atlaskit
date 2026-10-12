@@ -11,7 +11,7 @@ Built by **Halo Media and Digital Limited (Halo Digital)** for the National AI I
 | **Gateway** (`gateway/`) | An OpenAI-compatible HTTP API in front of N-ATLaS served by vLLM. It also exposes the four official N-ATLaS ASR models as `/v1/audio/transcriptions`, and adds translation, summarisation, language detection and voice-chat endpoints. It includes API keys and a privacy-preserving usage log. |
 | **Python SDK** (`sdk/python/`) | Zero-dependency client: `chat`, `stream`, `Conversation`, `transcribe`, `voice_chat`, `translate`, `summarize`, `detect_language`, plus an `atlaskit` CLI. |
 | **JavaScript SDK** (`sdk/js/`) | Zero-dependency ESM client for Node 18+, Deno, Bun and browsers, with the same API. |
-| **Playground** (`playground/`) | Browser UI served at `/`, in light or dark mode. It covers streaming chat with a model picker (base or fine-tuned), side-by-side comparison of all four languages, translation with base vs fine-tuned shown together, speech (upload or record), copy-paste code generation and usage stats. Each tab has a deep link, for example `/#speech`. |
+| **Playground** (`playground/`) | Browser UI served at `/`, in light or dark mode. It covers streaming chat with a model picker (base or fine-tuned), side-by-side comparison of all four languages, translation with base vs fine-tuned shown together (for the directions the adapter was trained on), speech (upload or record), copy-paste code generation and usage stats. Each tab has a deep link, for example `/#speech`. |
 | **Fine-tuning kit** (`finetune/`) | LoRA fine-tuning of N-ATLaS from OpenAI-format JSONL, rendered with N-ATLaS's own chat template. The adapter is served next to the base model and selected by name (`model="natlas-mt"`). |
 | **Evaluation harness** (`eval/`) | Benchmarks one or more N-ATLaS deployments or adapters (for example base vs fine-tuned) on FLORES+ translation (chrF), FLEURS speech recognition (WER/CER), language ID and QA. It writes JSON and Markdown reports. |
 | **RunPod deployment** (`deploy/runpod/`) | Two scripts take a GPU pod to a public HTTPS endpoint. |
@@ -109,7 +109,7 @@ client.chat.completions.create(model="n-atlas", messages=[{"role": "user", "cont
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/health` | Gateway + model status |
-| GET | `/v1/models` | `n-atlas` and the four ASR models |
+| GET | `/v1/models` | `n-atlas`, any fine-tuned adapters (for example `natlas-mt`) and the four ASR models |
 | POST | `/v1/chat/completions` | OpenAI-compatible, including streaming (SSE). Extension: `atlas_language` (`en`/`yo`/`ha`/`ig`) pins the reply language |
 | POST | `/v1/audio/transcriptions` | multipart `file` + `language`; routed to `NCAIR1/{Yoruba,Hausa,Igbo}-ASR` / `NigerianAccentedEnglish` |
 | POST | `/v1/atlas/voice-chat` | multipart audio → transcript + N-ATLaS reply in the same language |
@@ -125,7 +125,7 @@ Authentication: `Authorization: Bearer <key>` (or `X-API-Key`). Keys come from `
 
 ```bash
 python examples/dev_server.py        # gateway + playground against a mock model, no GPU needed
-pytest tests                         # 27 tests: core logic, gateway end to end, Python SDK, JS SDK, eval harness, fine-tuning data
+pytest tests                         # 28 tests: core logic, gateway end to end, Python SDK, JS SDK, eval harness, fine-tuning data
 ```
 
 ## Docs
@@ -136,6 +136,11 @@ pytest tests                         # 27 tests: core logic, gateway end to end,
 - [Fine-tuning N-ATLaS with LoRA](finetune/README.md)
 - [Evaluation harness](eval/README.md)
 - [Beta testing guide](docs/BETA_TESTING.md)
+- [Contributing](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md)
+
+## Contributing
+
+Contributions are welcome: code, docs, evaluation data, and especially reports of wrong output in Yoruba, Hausa, Igbo or Nigerian English. See [CONTRIBUTING.md](CONTRIBUTING.md) for the setup (no GPU needed), ground rules and pull-request process.
 
 ## Licensing
 
