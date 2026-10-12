@@ -21,6 +21,8 @@ Give each tester **their own API key**, so usage in `/v1/atlas/stats` can be cou
 
 ## Feedback form questions (Google Forms / Typeform)
 
+`docs/beta_feedback_form.gs` builds this form, plus a linked responses sheet, in one click. Paste it into https://script.new and click Run. The script turns off Google Workspace's organisation-only restriction, so external testers can respond. It also asks for a tester ID, which links each response to that tester's API usage, and asks whether the respondent is on the Halo Digital team.
+
 1. Name, role/company, and GitHub or LinkedIn (needed as evidence they are real, external developers)
 2. Which did you use? (Playground / Python SDK / JS SDK / OpenAI drop-in / CLI)
 3. How long did it take from reading the README to your first successful N-ATLaS response? (<5 min / 5–15 / 15–30 / >30 / didn't succeed)
