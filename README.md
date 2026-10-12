@@ -28,9 +28,17 @@ Built by **Halo Media and Digital Limited (Halo Digital)** for the National AI I
 
 ## Live demo
 
-The playground has a permanent home on GitHub Pages: [lawalshalom.github.io/atlaskit](https://lawalshalom.github.io/atlaskit/). It calls the AtlasKit API at the address in [`playground/hosted-api-url.txt`](playground/hosted-api-url.txt), so moving the backend never changes the link.
+Try it at [lawalshalom.github.io/atlaskit](https://lawalshalom.github.io/atlaskit/): paste an API key and click Connect.
 
-During the beta test on 12 October 2026, the API and N-ATLaS ran on an always-on RunPod GPU pod (`heou1vjm7ockft-8080.proxy.runpod.net`) costing about $0.72 an hour, or roughly $17 a day, whether or not anyone was using it. **To keep running costs down, that pod will be terminated.** N-ATLaS will move to a scale-to-zero GPU backend that bills only while it is answering, and `hosted-api-url.txt` will then point at the new address. After a quiet spell, the first request may take one to three minutes while a GPU starts; later requests run at normal speed. The pod address above will stop working once it is terminated. Use the GitHub Pages link instead.
+The beta test on 12 October 2026 ran on an always-on RunPod GPU pod costing about $0.72 an hour, or roughly $17 a day, whether or not anyone was using it. **To keep running costs down, that pod has been replaced by a scale-to-zero setup that bills only while it is answering:**
+
+```
+GitHub Pages playground  ->  Cloudflare Worker (free)        ->  RunPod Serverless load-balancing endpoint
+(static, permanent link)     atlaskit.femi-ced.workers.dev       vLLM (N-ATLaS + adapter) + AtlasKit gateway + ASR
+                             adds RunPod's key server-side       weights on a network volume, 0 workers when idle
+```
+
+When nobody has used it for 10 minutes, the GPU shuts down. The next visitor sees a "Waking up N-ATLaS" notice while a GPU starts. That takes about 2–3 minutes, or longer if RunPod picks a machine that has never run the image. After that, answers stream at normal speed (about 60 tokens a second on an RTX 4090). The API base URL for the SDKs and the OpenAI SDK is `https://atlaskit.femi-ced.workers.dev` (add `/v1` for the OpenAI SDK). The playground reads it from [`playground/hosted-api-url.txt`](playground/hosted-api-url.txt). Setup steps are in [docs/DEPLOY_RUNPOD.md](docs/DEPLOY_RUNPOD.md#scale-to-zero-runpod-serverless).
 
 ## Measured results
 
