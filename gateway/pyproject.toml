@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atlaskit-gateway"
+version = "0.1.0"
+description = "OpenAI-compatible gateway, ASR and tooling for N-ATLaS, Nigeria's multilingual LLM"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Halo Media and Digital Limited" }]
+dependencies = ["starlette>=0.37", "uvicorn[standard]>=0.29", "httpx>=0.27", "python-multipart>=0.0.9"]
+
+[project.optional-dependencies]
+asr = ["transformers>=4.44", "torch>=2.2", "librosa>=0.10", "soundfile>=0.12", "numpy"]
+
+[project.scripts]
+atlaskit-gateway = "atlaskit_gateway.__main__:main"
+
+[tool.setuptools]
+packages = ["atlaskit_gateway"]

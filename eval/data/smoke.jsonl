@@ -1,0 +1,14 @@
+{"task": "lid", "input": "Ẹ kú àárọ̀, ṣé dáadáa ni?", "label": "yo"}
+{"task": "lid", "input": "Mo fẹ́ ra àwọn ẹ̀wà ní ọjà.", "label": "yo"}
+{"task": "lid", "input": "Ina kwana? Lafiya lau.", "label": "ha"}
+{"task": "lid", "input": "Ina son zuwa kasuwa gobe da safe.", "label": "ha"}
+{"task": "lid", "input": "Kedu ka ị mere?", "label": "ig"}
+{"task": "lid", "input": "Achọrọ m ịga ahịa echi.", "label": "ig"}
+{"task": "lid", "input": "Please how much is the transport fare to Ikeja?", "label": "en"}
+{"task": "lid", "input": "Abeg wetin dey happen for market today?", "label": "en"}
+{"task": "qa", "input": "What is the capital city of Nigeria?", "answers": ["Abuja"], "language": "en"}
+{"task": "qa", "input": "What is the capital city of Nigeria?", "answers": ["Abuja"], "language": "yo"}
+{"task": "qa", "input": "What is the capital city of Nigeria?", "answers": ["Abuja"], "language": "ha"}
+{"task": "qa", "input": "What is the capital city of Nigeria?", "answers": ["Abuja"], "language": "ig"}
+{"task": "qa", "input": "Which river joins the Niger at Lokoja?", "answers": ["Benue"], "language": "en"}
+{"task": "qa", "input": "What is the name of Nigeria's currency?", "answers": ["Naira"], "language": "en"}

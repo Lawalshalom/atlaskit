@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AtlasKit Playground</title>
+<style>
+:root{--bg:#f7f6f2;--panel:#fff;--ink:#1b1d1c;--muted:#6a6f6c;--line:#e3e1da;--accent:#0b7a4b;--accent-ink:#fff;--soft:#e8f3ed;--warn:#a23b1e;--code:#f1efe8}
+@media (prefers-color-scheme:dark){:root{--bg:#141615;--panel:#1d201f;--ink:#ecebe6;--muted:#9aa09c;--line:#2f3331;--accent:#3ec486;--accent-ink:#0b1410;--soft:#1f2e27;--warn:#f08a6c;--code:#262a28}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-size:18px;margin:0}h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:13px}
+.conn{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,select,textarea,button{font:inherit;color:inherit}
+input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+textarea{width:100%;resize:vertical;min-height:90px}
+button{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
+button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500}
+button:disabled{opacity:.5;cursor:default}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
+.dot.ok{background:var(--accent)}.dot.bad{background:var(--warn)}
+nav{display:flex;gap:4px;padding:10px 20px;overflow-x:auto}
+nav button{background:transparent;color:var(--muted);font-weight:500}
+nav button.on{background:var(--soft);color:var(--ink)}
+main{max-width:1100px;margin:0 auto;padding:8px 20px 40px}
+section{display:none}section.on{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.row label{font-size:13px;color:var(--muted)}
+.chat{display:flex;flex-direction:column;gap:10px;min-height:200px;max-height:55vh;overflow:auto;padding-right:4px}
+.msg{padding:10px 12px;border-radius:10px;white-space:pre-wrap;max-width:85%}
+.msg.user{align-self:flex-end;background:var(--soft)}
+.msg.assistant{align-self:flex-start;background:var(--bg);border:1px solid var(--line)}
+.msg .meta{display:flex;gap:6px;margin-top:6px;font-size:12px;color:var(--muted);align-items:center}
+.msg .meta button{padding:2px 8px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.out{white-space:pre-wrap;min-height:60px}
+.lang{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+pre{background:var(--code);border-radius:8px;padding:12px;overflow:auto;font-size:13px;margin:0}
+.err{color:var(--warn);font-size:14px;margin-top:6px;min-height:1em}
+.stat{font-size:28px;font-weight:700}.stat small{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.foot{color:var(--muted);font-size:12px;text-align:center;padding:20px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Atlas<span>Kit</span> Playground</h1>
+    <div class="sub">Try N-ATLaS in Yoruba, Hausa, Igbo and Nigerian English</div>
+  </div>
+  <div class="conn">
+    <span class="dot" id="dot"></span><span class="sub" id="status">checking…</span>
+    <input id="baseUrl" placeholder="Gateway URL" size="28" aria-label="Gateway URL">
+    <input id="apiKey" type="password" placeholder="API key" size="14" aria-label="API key">
+    <button class="ghost" id="connect">Connect</button>
+  </div>
+</header>
+<nav id="tabs">
+  <button data-tab="chat" class="on">Chat</button>
+  <button data-tab="compare">Compare languages</button>
+  <button data-tab="translate">Translate</button>
+  <button data-tab="speech">Speech</button>
+  <button data-tab="code">Code</button>
+  <button data-tab="stats">Usage</button>
+</nav>
+<main>
+<section id="chat" class="on">
+  <div class="card">
+    <div class="row">
+      <label>Reply language <select id="chatLang"><option value="">Auto</option><option value="en">English</option><option value="yo">Yoruba</option><option value="ha">Hausa</option><option value="ig">Igbo</option></select></label>
+      <label>Temperature <input id="temp" type="number" min="0" max="1.5" step="0.1" value="0.1" style="width:70px"></label>
+      <label>Max tokens <input id="maxTok" type="number" min="16" max="4096" value="600" style="width:80px"></label>
+      <button class="ghost" id="clear">New chat</button>
+    </div>
+    <input id="system" placeholder="Optional system prompt (e.g. You are an agricultural extension officer)" style="width:100%;margin-bottom:10px">
+    <div class="chat" id="log"></div>
+    <div class="err" id="chatErr"></div>
+    <textarea id="prompt" placeholder="Type a message… (Ctrl/⌘+Enter to send)"></textarea>
+    <div class="row" style="margin-top:8px"><button id="send">Send</button><button class="ghost" id="stop" disabled>Stop</button></div>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="card">
+    <p class="sub">Ask once, get answers pinned to each language side by side. Useful for spotting where the model is strong or weak.</p>
+    <textarea id="cmpPrompt" placeholder="e.g. Explain how to store maize after harvest to avoid weevils."></textarea>
+    <div class="row" style="margin-top:8px"><button id="cmpGo">Compare</button></div>
+    <div class="err" id="cmpErr"></div>
+  </div>
+  <div class="grid" id="cmpOut"></div>
+</section>
+
+<section id="translate">
+  <div class="card">
+    <div class="row">
+      <label>From <select id="trFrom"><option value="">Auto</option><option value="en">English</option><option value="yo">Yoruba</option><option value="ha">Hausa</option><option value="ig">Igbo</option></select></label>
+      <label>To <select id="trTo"><option value="yo">Yoruba</option><option value="ha">Hausa</option><option value="ig">Igbo</option><option value="en">English</option></select></label>
+      <button class="ghost" id="detect">Detect language</button>
+    </div>
+    <textarea id="trIn" placeholder="Text to translate"></textarea>
+    <div class="row" style="margin-top:8px"><button id="trGo">Translate</button></div>
+    <div class="err" id="trErr"></div>
+    <div class="out card" id="trOut" style="margin-top:8px"></div>
+  </div>
+</section>
+
+<section id="speech">
+  <div class="card">
+    <p class="sub">Uses the official N-ATLaS ASR models (NCAIR1/*-ASR). Upload a voice note (wav, mp3, ogg, m4a) or record from your microphone.</p>
+    <div class="row">
+      <label>Spoken language <select id="spLang"><option value="yo">Yoruba</option><option value="ha">Hausa</option><option value="ig">Igbo</option><option value="en">Nigerian English</option></select></label>
+      <input type="file" id="spFile" accept="audio/*">
+      <button class="ghost" id="rec">● Record</button>
+    </div>
+    <audio id="spPlayer" controls style="width:100%;display:none"></audio>
+    <div class="row" style="margin-top:8px"><button id="spTranscribe">Transcribe</button><button id="spVoice">Ask N-ATLaS (voice chat)</button></div>
+    <div class="err" id="spErr"></div>
+    <div class="grid">
+      <div class="card"><div class="lang">Transcript</div><div class="out" id="spText"></div></div>
+      <div class="card"><div class="lang">N-ATLaS reply</div><div class="out" id="spReply"></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="code">
+  <div class="card">
+    <p class="sub">The last chat request from this playground, as code. Copy it into your app.</p>
+    <div class="row"><select id="codeLang"><option value="python">Python SDK</option><option value="js">JavaScript SDK</option><option value="openai">OpenAI SDK (drop-in)</option><option value="curl">curl</option></select><button class="ghost" id="copy">Copy</button></div>
+    <pre id="codeOut"></pre>
+  </div>
+</section>
+
+<section id="stats">
+  <div class="card">
+    <div class="row"><button class="ghost" id="refreshStats">Refresh</button><span class="sub">Anonymous request counts recorded by this gateway (no prompt text is stored).</span></div>
+    <div class="grid" id="statsOut"></div>
+  </div>
+</section>
+</main>
+<div class="foot">N-ATLaS is developed by NCAIR & Awarri and released under the Awarri Open-Source Research and Innovation License. Playground by Halo Digital · AtlasKit 0.1.0</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const LANGS = { en: "Nigerian English", yo: "Yoruba", ha: "Hausa", ig: "Igbo" };
+const store = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+let history = [], lastRequest = null, controller = null, recorder = null, recorded = null;
+
+$("baseUrl").value = store.get("atlas.url", location.origin.startsWith("http") ? location.origin : "http://localhost:8080");
+$("apiKey").value = store.get("atlas.key", "");
+const base = () => $("baseUrl").value.replace(/\/+$/, "");
+const headers = (json = true) => { const h = {}; if (json) h["Content-Type"] = "application/json"; const k = $("apiKey").value.trim(); if (k) h.Authorization = "Bearer " + k; return h; };
+
+async function api(path, body, opts = {}) {
+  const res = await fetch(base() + path, { method: body ? "POST" : "GET", headers: headers(!(body instanceof FormData)), body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined, signal: opts.signal });
+  if (!res.ok) { let m = await res.text(); try { m = JSON.parse(m).error.message; } catch {} throw new Error(m || res.statusText); }
+  return opts.raw ? res : res.json();
+}
+
+async function checkHealth() {
+  $("dot").className = "dot"; $("status").textContent = "checking…";
+  try {
+    const res = await fetch(base() + "/health"); const h = await res.json();
+    $("dot").className = "dot " + (h.upstream ? "ok" : "bad");
+    $("status").textContent = h.upstream ? `connected · ${h.model}` : "gateway up, model offline";
+  } catch { $("dot").className = "dot bad"; $("status").textContent = "not reachable"; }
+}
+$("connect").onclick = () => { store.set("atlas.url", base()); store.set("atlas.key", $("apiKey").value.trim()); checkHealth(); };
+
+document.querySelectorAll("#tabs button").forEach((b) => b.onclick = () => {
+  document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
+  document.querySelectorAll("main section").forEach((s) => s.classList.toggle("on", s.id === b.dataset.tab));
+  if (b.dataset.tab === "code") renderCode();
+  if (b.dataset.tab === "stats") loadStats();
+});
+
+function bubble(role, text) {
+  const d = document.createElement("div"); d.className = "msg " + role; d.textContent = text; $("log").appendChild(d); $("log").scrollTop = 1e9; return d;
+}
+function addFeedback(el, lang) {
+  const meta = document.createElement("div"); meta.className = "meta"; meta.innerHTML = "Was this good? ";
+  for (const [r, label] of [[1, "👍"], [-1, "👎"]]) {
+    const b = document.createElement("button"); b.className = "ghost"; b.textContent = label;
+    b.onclick = async () => { try { await api("/v1/atlas/feedback", { rating: r, language: lang || null, tag: "playground" }); meta.textContent = "Thanks for the feedback"; } catch (e) { meta.textContent = e.message; } };
+    meta.appendChild(b);
+  }
+  el.appendChild(meta);
+}
+
+async function send() {
+  const text = $("prompt").value.trim(); if (!text || controller) return;
+  $("chatErr").textContent = ""; $("prompt").value = "";
+  history.push({ role: "user", content: text }); bubble("user", text);
+  const lang = $("chatLang").value, sys = $("system").value.trim();
+  const messages = sys ? [{ role: "system", content: sys }, ...history] : [...history];
+  const body = { model: "n-atlas", messages, stream: true, temperature: +$("temp").value, max_tokens: +$("maxTok").value };
+  if (lang) body.atlas_language = lang;
+  lastRequest = { ...body, stream: false };
+  const el = bubble("assistant", "…"); let out = "";
+  controller = new AbortController(); $("send").disabled = true; $("stop").disabled = false;
+  try {
+    const res = await api("/v1/chat/completions", body, { raw: true, signal: controller.signal });
+    const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true }); let i;
+      while ((i = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line.startsWith("data:") || line.endsWith("[DONE]")) continue;
+        try { const d = JSON.parse(line.slice(5)).choices?.[0]?.delta?.content; if (d) { out += d; el.textContent = out; $("log").scrollTop = 1e9; } } catch {}
+      }
+    }
+  } catch (e) { if (e.name !== "AbortError") $("chatErr").textContent = e.message; }
+  if (!out) el.textContent = "(no response)";
+  history.push({ role: "assistant", content: out }); addFeedback(el, lang);
+  controller = null; $("send").disabled = false; $("stop").disabled = true;
+}
+$("send").onclick = send;
+$("stop").onclick = () => controller?.abort();
+$("prompt").onkeydown = (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) send(); };
+$("clear").onclick = () => { history = []; $("log").innerHTML = ""; };
+
+$("cmpGo").onclick = async () => {
+  const text = $("cmpPrompt").value.trim(); if (!text) return;
+  $("cmpErr").textContent = ""; $("cmpOut").innerHTML = ""; $("cmpGo").disabled = true;
+  await Promise.all(Object.entries(LANGS).map(async ([code, name]) => {
+    const card = document.createElement("div"); card.className = "card";
+    card.innerHTML = `<div class="lang">${name}</div><div class="out">…</div>`; $("cmpOut").appendChild(card);
+    const t0 = performance.now();
+    try {
+      const r = await api("/v1/chat/completions", { model: "n-atlas", messages: [{ role: "user", content: text }], atlas_language: code, max_tokens: 500 });
+      card.querySelector(".out").textContent = r.choices[0].message.content;
+      const m = document.createElement("div"); m.className = "sub"; m.textContent = `${((performance.now() - t0) / 1000).toFixed(1)}s · ${r.usage?.completion_tokens ?? "?"} tokens`; card.appendChild(m);
+      const holder = document.createElement("div"); holder.className = "msg"; holder.style.padding = 0; card.appendChild(holder); addFeedback(holder, code);
+    } catch (e) { card.querySelector(".out").textContent = "Error: " + e.message; }
+  }));
+  $("cmpGo").disabled = false;
+};
+
+$("trGo").onclick = async () => {
+  const text = $("trIn").value.trim(); if (!text) return; $("trErr").textContent = ""; $("trOut").textContent = "…";
+  try { $("trOut").textContent = (await api("/v1/atlas/translate", { text, target: $("trTo").value, source: $("trFrom").value || null })).translation; }
+  catch (e) { $("trOut").textContent = ""; $("trErr").textContent = e.message; }
+};
+$("detect").onclick = async () => {
+  const text = $("trIn").value.trim(); if (!text) return;
+  try { const r = await api("/v1/atlas/detect-language", { text }); $("trFrom").value = r.language; $("trErr").textContent = `Detected ${LANGS[r.language]} (confidence ${Math.round(r.confidence * 100)}%)`; }
+  catch (e) { $("trErr").textContent = e.message; }
+};
+
+$("spFile").onchange = () => { recorded = null; const f = $("spFile").files[0]; if (f) { $("spPlayer").src = URL.createObjectURL(f); $("spPlayer").style.display = "block"; } };
+$("rec").onclick = async () => {
+  if (recorder) { recorder.stop(); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const chunks = []; recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = (e) => chunks.push(e.data);
+    recorder.onstop = () => { recorded = new Blob(chunks, { type: recorder.mimeType }); stream.getTracks().forEach((t) => t.stop()); recorder = null; $("rec").textContent = "● Record"; $("spPlayer").src = URL.createObjectURL(recorded); $("spPlayer").style.display = "block"; };
+    recorder.start(); $("rec").textContent = "■ Stop";
+  } catch (e) { $("spErr").textContent = "Microphone unavailable: " + e.message; }
+};
+async function speech(path) {
+  const audio = recorded || $("spFile").files[0]; if (!audio) { $("spErr").textContent = "Choose or record audio first"; return; }
+  const fd = new FormData(); fd.append("language", $("spLang").value); fd.append("file", audio, audio.name || "recording.webm");
+  $("spErr").textContent = ""; $("spText").textContent = "…"; if (path.includes("voice")) $("spReply").textContent = "…";
+  try { const r = await api(path, fd); $("spText").textContent = r.text ?? r.transcript; if (r.reply) $("spReply").textContent = r.reply; }
+  catch (e) { $("spErr").textContent = e.message; $("spText").textContent = ""; $("spReply").textContent = ""; }
+}
+$("spTranscribe").onclick = () => speech("/v1/audio/transcriptions");
+$("spVoice").onclick = () => speech("/v1/atlas/voice-chat");
+
+function renderCode() {
+  const r = lastRequest || { model: "n-atlas", messages: [{ role: "user", content: "Bawo ni o se le ran agbe lowo?" }], atlas_language: "yo", temperature: 0.1, max_tokens: 600 };
+  const url = base(), msgs = JSON.stringify(r.messages, null, 2), lang = r.atlas_language;
+  const py = `from atlaskit import AtlasKit\n\natlas = AtlasKit("${url}", api_key="YOUR_KEY")\nreply = atlas.chat(\n    ${msgs.replace(/\n/g, "\n    ")},\n${lang ? `    language="${lang}",\n` : ""}    temperature=${r.temperature}, max_tokens=${r.max_tokens},\n)\nprint(reply.text)`;
+  const js = `import { AtlasKit } from "atlaskit";\n\nconst atlas = new AtlasKit({ baseUrl: "${url}", apiKey: "YOUR_KEY" });\nconst { text } = await atlas.chat(${msgs}, {${lang ? ` language: "${lang}",` : ""} temperature: ${r.temperature}, maxTokens: ${r.max_tokens} });\nconsole.log(text);`;
+  const oa = `from openai import OpenAI  # existing OpenAI code works unchanged\n\nclient = OpenAI(base_url="${url}/v1", api_key="YOUR_KEY")\nresp = client.chat.completions.create(\n    model="n-atlas",\n    messages=${msgs.replace(/\n/g, "\n    ")},\n${lang ? `    extra_body={"atlas_language": "${lang}"},\n` : ""})\nprint(resp.choices[0].message.content)`;
+  const curl = `curl ${url}/v1/chat/completions \\\n  -H "Authorization: Bearer YOUR_KEY" -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(r).replace(/'/g, "'\\''")}'`;
+  $("codeOut").textContent = { python: py, js, openai: oa, curl }[$("codeLang").value];
+}
+$("codeLang").onchange = renderCode;
+$("copy").onclick = () => navigator.clipboard?.writeText($("codeOut").textContent);
+
+async function loadStats() {
+  $("statsOut").innerHTML = "";
+  try {
+    const s = await api("/v1/atlas/stats");
+    const tiles = [["Requests", s.total_requests], ["Unique clients", s.unique_clients], ["Feedback 👍", s.feedback.positive], ["Feedback 👎", s.feedback.negative]];
+    for (const [k, v] of tiles) { const c = document.createElement("div"); c.className = "card stat"; c.innerHTML = `${v}<small>${k}</small>`; $("statsOut").appendChild(c); }
+    const pre = document.createElement("pre"); pre.textContent = JSON.stringify({ by_language: s.by_language, by_endpoint: s.by_endpoint, median_latency_ms: s.median_latency_ms }, null, 2);
+    const c = document.createElement("div"); c.className = "card"; c.style.gridColumn = "1/-1"; c.appendChild(pre); $("statsOut").appendChild(c);
+  } catch (e) { $("statsOut").textContent = e.message; }
+}
+$("refreshStats").onclick = loadStats;
+checkHealth();
+</script>
+</body>
+</html>

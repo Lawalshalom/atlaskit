@@ -1,0 +1,14 @@
+{
+  "name": "atlaskit",
+  "version": "0.1.0",
+  "description": "Zero-dependency JavaScript SDK for N-ATLaS, Nigeria's multilingual LLM (via an AtlasKit gateway)",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": { ".": "./src/index.js" },
+  "files": ["src"],
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node --test test/sdk.test.js" },
+  "keywords": ["n-atlas", "nigeria", "llm", "yoruba", "hausa", "igbo", "asr"],
+  "author": "Halo Media and Digital Limited",
+  "license": "Apache-2.0"
+}

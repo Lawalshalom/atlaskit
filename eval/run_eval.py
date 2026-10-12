@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""AtlasKit evaluation harness for N-ATLaS.
+
+Runs a JSONL benchmark against one or more AtlasKit gateways (for example base
+N-ATLaS vs. a fine-tuned N-ATLaS) and writes a JSON + Markdown report.
+
+Task types (one JSON object per line):
+  {"task": "translate", "source": "en", "target": "yo", "input": "...", "reference": "..."}
+  {"task": "lid",       "input": "...", "label": "ha"}
+  {"task": "qa",        "input": "...", "answers": ["Abuja"], "language": "en"}
+
+Usage:
+  python eval/run_eval.py --data eval/data/smoke.jsonl --endpoint base=http://localhost:8080
+  python eval/run_eval.py --flores yo,ha,ig --limit 100 --endpoint base=URL --endpoint tuned=URL2
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import statistics
+import sys
+import time
+from collections import Counter, defaultdict
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "sdk" / "python"))
+from atlaskit import AtlasKit, AtlasKitError  # noqa: E402
+
+# ---------------------------------------------------------------------------
+# chrF (character n-gram F-score, Popović 2015) — dependency-free implementation
+# matching sacrebleu's defaults (char order 6, beta 2, whitespace removed).
+# ---------------------------------------------------------------------------
+
+def _ngrams(text: str, n: int) -> Counter:
+    text = "".join(text.split())
+    return Counter(text[i:i + n] for i in range(len(text) - n + 1))
+
+
+def chrf(hypothesis: str, reference: str, order: int = 6, beta: float = 2.0) -> float:
+    precisions, recalls = [], []
+    for n in range(1, order + 1):
+        hyp, ref = _ngrams(hypothesis, n), _ngrams(reference, n)
+        if not hyp or not ref:
+            continue
+        overlap = sum((hyp & ref).values())
+        precisions.append(overlap / sum(hyp.values()))
+        recalls.append(overlap / sum(ref.values()))
+    if not precisions:
+        return 0.0
+    p, r = statistics.mean(precisions), statistics.mean(recalls)
+    if p + r == 0:
+        return 0.0
+    b2 = beta ** 2
+    return 100 * (1 + b2) * p * r / (b2 * p + r)
+
+
+def corpus_chrf(pairs: list[tuple[str, str]], order: int = 6, beta: float = 2.0) -> float:
+    """Corpus-level chrF: n-gram statistics summed over all segments (as sacrebleu does)."""
+    precisions, recalls = [], []
+    for n in range(1, order + 1):
+        overlap = hyp_total = ref_total = 0
+        for hyp, ref in pairs:
+            h, r = _ngrams(hyp, n), _ngrams(ref, n)
+            overlap += sum((h & r).values())
+            hyp_total += sum(h.values())
+            ref_total += sum(r.values())
+        if hyp_total and ref_total:
+            precisions.append(overlap / hyp_total)
+            recalls.append(overlap / ref_total)
+    if not precisions:
+        return 0.0
+    p, r = statistics.mean(precisions), statistics.mean(recalls)
+    b2 = beta ** 2
+    return 0.0 if p + r == 0 else 100 * (1 + b2) * p * r / (b2 * p + r)
+
+
+def normalise(s: str) -> str:
+    return " ".join(s.lower().split())
+
+
+# ---------------------------------------------------------------------------
+# Data loading
+# ---------------------------------------------------------------------------
+
+def load_jsonl(path: str) -> list[dict]:
+    with open(path, encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
+FLORES_CODES = {"en": "eng_Latn", "yo": "yor_Latn", "ha": "hau_Latn", "ig": "ibo_Latn"}
+
+
+def load_flores(langs: list[str], limit: int, split: str = "devtest") -> list[dict]:
+    """English -> {yo,ha,ig} translation items from FLORES+ (requires `datasets` and HF access)."""
+    from datasets import load_dataset
+
+    def column(code: str) -> list[str]:
+        ds = load_dataset("openlanguagedata/flores_plus", FLORES_CODES[code], split=split)
+        return [row["text"] for row in ds]
+
+    en = column("en")[:limit]
+    items = []
+    for lang in langs:
+        refs = column(lang)[:limit]
+        items += [{"task": "translate", "source": "en", "target": lang, "input": s, "reference": r}
+                  for s, r in zip(en, refs)]
+    return items
+
+
+# ---------------------------------------------------------------------------
+# Runner
+# ---------------------------------------------------------------------------
+
+def run_item(client: AtlasKit, item: dict) -> dict:
+    t0 = time.perf_counter()
+    task = item["task"]
+    out: dict = {"task": task}
+    try:
+        if task == "translate":
+            hyp = client.translate(item["input"], item["target"], item.get("source"))
+            out.update(output=hyp, score=chrf(hyp, item["reference"]), group=f"{item.get('source', '?')}->{item['target']}")
+        elif task == "lid":
+            pred = client.detect_language(item["input"])["language"]
+            out.update(output=pred, score=float(pred == item["label"]), group=f"lid:{item['label']}")
+        elif task == "qa":
+            reply = client.chat(item["input"], language=item.get("language"), max_tokens=200).text
+            hit = any(normalise(a) in normalise(reply) for a in item["answers"])
+            out.update(output=reply, score=float(hit), group=f"qa:{item.get('language') or 'auto'}")
+        else:
+            raise ValueError(f"unknown task {task}")
+    except (AtlasKitError, ValueError, KeyError) as exc:
+        out.update(error=str(exc), score=0.0, group=f"{task}:error")
+    out["latency_s"] = round(time.perf_counter() - t0, 3)
+    return out
+
+
+def summarise(items: list[dict], results: list[dict]) -> dict:
+    groups: dict[str, list[float]] = defaultdict(list)
+    pairs: dict[str, list[tuple[str, str]]] = defaultdict(list)
+    for item, res in zip(items, results):
+        groups[res["group"]].append(res["score"])
+        if item["task"] == "translate" and "output" in res:
+            pairs[res["group"]].append((res["output"], item["reference"]))
+    summary = {}
+    for g, scores in sorted(groups.items()):
+        entry = {"n": len(scores), "mean": round(statistics.mean(scores), 4)}
+        if g in pairs:
+            entry["corpus_chrf"] = round(corpus_chrf(pairs[g]), 2)
+        summary[g] = entry
+    lat = [r["latency_s"] for r in results]
+    summary["_overall"] = {"n": len(results), "errors": sum(1 for r in results if "error" in r),
+                           "median_latency_s": statistics.median(lat) if lat else None}
+    return summary
+
+
+def to_markdown(report: dict) -> str:
+    names = list(report["endpoints"])
+    groups = sorted({g for n in names for g in report["endpoints"][n]["summary"] if not g.startswith("_")})
+    lines = [f"# N-ATLaS evaluation — {report['dataset']}", "",
+             f"Run at {report['started']} · {report['n_items']} items", "",
+             "| Group | n | " + " | ".join(names) + " |", "|---|---|" + "---|" * len(names)]
+    for g in groups:
+        cells, n = [], "-"
+        for name in names:
+            e = report["endpoints"][name]["summary"].get(g)
+            if not e:
+                cells.append("-")
+                continue
+            n = e["n"]
+            cells.append(f"chrF {e['corpus_chrf']}" if "corpus_chrf" in e else f"{e['mean'] * 100:.1f}%")
+        lines.append(f"| {g} | {n} | " + " | ".join(cells) + " |")
+    lines.append("")
+    for name in names:
+        o = report["endpoints"][name]["summary"]["_overall"]
+        lines.append(f"- **{name}**: {o['errors']} errors, median latency {o['median_latency_s']}s")
+    return "\n".join(lines) + "\n"
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--data", help="JSONL benchmark file")
+    ap.add_argument("--flores", help="Comma-separated target languages to pull from FLORES+ (e.g. yo,ha,ig)")
+    ap.add_argument("--limit", type=int, default=100, help="Items per FLORES language")
+    ap.add_argument("--endpoint", action="append", required=True,
+                    help="name=URL of an AtlasKit gateway; repeat to compare models")
+    ap.add_argument("--api-key")
+    ap.add_argument("--out", default="eval/reports")
+    args = ap.parse_args(argv)
+
+    items: list[dict] = []
+    if args.data:
+        items += load_jsonl(args.data)
+    if args.flores:
+        items += load_flores([l.strip() for l in args.flores.split(",")], args.limit)
+    if not items:
+        ap.error("provide --data and/or --flores")
+
+    report = {"dataset": args.data or f"flores_plus:{args.flores}", "n_items": len(items),
+              "started": time.strftime("%Y-%m-%d %H:%M:%S"), "endpoints": {}}
+    for spec in args.endpoint:
+        name, _, url = spec.partition("=")
+        if not url:
+            name, url = "default", name
+        client = AtlasKit(url, api_key=args.api_key)
+        results = []
+        for i, item in enumerate(items, 1):
+            results.append(run_item(client, item))
+            print(f"\r[{name}] {i}/{len(items)}", end="", file=sys.stderr, flush=True)
+        print(file=sys.stderr)
+        report["endpoints"][name] = {"url": url, "summary": summarise(items, results), "results": results}
+
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    (out / f"report-{stamp}.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    md = to_markdown(report)
+    (out / f"report-{stamp}.md").write_text(md, encoding="utf-8")
+    print(md)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

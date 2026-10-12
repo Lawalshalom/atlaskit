@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atlaskit"
+version = "0.1.0"
+description = "Zero-dependency Python SDK for N-ATLaS, Nigeria's multilingual LLM (via an AtlasKit gateway)"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Halo Media and Digital Limited" }]
+dependencies = []
+keywords = ["n-atlas", "nigeria", "llm", "yoruba", "hausa", "igbo", "asr"]
+
+[project.scripts]
+atlaskit = "atlaskit.cli:main"
+
+[tool.setuptools]
+packages = ["atlaskit"]
