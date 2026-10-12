@@ -91,6 +91,12 @@ def test_auth_required(gateway):
     assert e.value.status == 401
 
 
+def test_x_api_key_wins_over_authorization(gateway):
+    import urllib.request
+    req = urllib.request.Request(gateway["url"] + "/v1/models", headers={"Authorization": "Bearer runpod-platform-key", "X-API-Key": KEY})
+    assert urllib.request.urlopen(req).status == 200
+
+
 def test_chat_and_upstream_shape(atlas):
     r = atlas.chat("Sannu", language="ha")
     assert r.text == "echo: Sannu"           # special tokens stripped

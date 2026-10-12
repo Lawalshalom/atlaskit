@@ -55,11 +55,11 @@ def create_app(settings: Settings | None = None, transcriber: Any = None,
 
     # ------------------------------------------------------------------ helpers
     def auth(request: Request) -> str:
-        key = None
+        # X-API-Key wins when both are sent: behind RunPod Serverless, Authorization carries RunPod's own key.
+        key = request.headers.get("x-api-key")
         header = request.headers.get("authorization", "")
-        if header.lower().startswith("bearer "):
+        if not key and header.lower().startswith("bearer "):
             key = header[7:].strip()
-        key = key or request.headers.get("x-api-key")
         if s.api_keys and key not in s.api_keys:
             raise AtlasError("Invalid or missing API key", 401, "unauthorized")
         return client_id(key, request.client.host if request.client else None)
